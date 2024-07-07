@@ -4,7 +4,7 @@ Repository with usefull code for processing CT and MRI data
 Inside every folder you will find examples of (I hope) interesting image processing questions.  </br>
 This is a learning repository and I am open to chat about improvements for the code and new ideas/perspectives to the solution of the example problems.
 
-**Label creation**
+**Label creation** </br>
 Inside this folder you will find the strategy for adding labels to segmented images. In the example data set we use a data set from Gatidis et al [1], an open source whole-body. A powerful tool for segmenting CT images, Total Segmentator by  Wasserthal et al. [2], is used to acquire a whole body total segmentation.  </br>
 In this exploration example I will show how to create a new label with steps and thought process that lets you edit segmented images for interesting tests and research.
 
