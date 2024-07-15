@@ -1,0 +1,6 @@
+[submodule "MRsim/susceptibility-to-fieldmap-fft"]
+	path = MRsim/susceptibility-to-fieldmap-fft
+	url = https://github.com/shimming-toolbox/susceptibility-to-fieldmap-fft.git
+[submodule "MRsim/tissue-to-MRproperty"]
+	path = MRsim/tissue-to-MRproperty
+	url = https://github.com/shimming-toolbox/tissue-to-MRproperty.git
