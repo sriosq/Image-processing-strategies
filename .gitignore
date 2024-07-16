@@ -5,6 +5,9 @@ __pycache__/
 
 # C extensions
 *.so
+# Nifti extensions
+*.nii
+*.nii.gz
 
 # Distribution / packaging
 .Python
