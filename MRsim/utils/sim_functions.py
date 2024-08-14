@@ -117,7 +117,8 @@ def sim_with_texture(pd_vol,T2star_vol, FA, te, deltaB0_vol, gamma, B0, handedne
     for i in range(dims[0]):
         for j in range(dims[1]):
             for k in range(dims[2]):
-                decay_gauss[i,j,k] = np.exp(-te / T2star_vol[i,j,k])
+                decay_gauss[i,j,k] = np.exp(-te*1e3 / T2star_vol[i,j,k]) 
+    # Here important to transform te to be in ms because input is in seconds!
     
     #for i in range(len(dims)):
     #    decay_gauss[i] = np.exp(-te / T2star_vol[i])
