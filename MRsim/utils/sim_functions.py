@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import nibabel as nib
 from math import pi
 
+# The code in this section is highly influenced by Chapter 2.5 of QSM RC 2.0
+
 def optimize_measurement(pd_vol, t2s_vol, dims, deltaB0, FA,TE,B0):
     # This code seeks to accomplish the same as the above method but
     # We are trying to optimize by using volumes
@@ -16,7 +18,7 @@ def optimize_measurement(pd_vol, t2s_vol, dims, deltaB0, FA,TE,B0):
     magnitude = np.zeros(newVol_dims)
     phase = np.zeros(newVol_dims)
 
-    gamma = 42.58 * B0  * 2 * pi  # This is rad*Hz/Tesla 
+    # gamma = 42.58 * B0  * 2 * pi  # This is rad*Hz/Tesla 
     gamma_rd_sT = 267.52218744 * 1e6 # In rad/(sec * T) it needs to be 10e5 or 1e6 lol
     handedness = 'left'
 
@@ -34,6 +36,7 @@ def optimize_measurement(pd_vol, t2s_vol, dims, deltaB0, FA,TE,B0):
         print(f"mag shape: {mag.shape}, phase_arr shape: {phase_arr.shape}")
         if mag.shape != tuple(dims):
             raise ValueError(f"Shape mismatch: expected {tuple(dims)} but got {mag.shape}")
+        
         magnitude[..., te_idx] = mag
         phase[..., te_idx] = phase_arr
        
@@ -113,11 +116,13 @@ def sim_with_texture(pd_vol,T2star_vol, FA, te, deltaB0_vol, gamma, B0, handedne
     #decay = np.exp(- te  / (T2star_vol ))  # Convert T2s values to same as Echo Times and apply decay exponential
     dims = np.array(pd_vol.shape)
     decay_gauss = np.zeros(dims)
+
+    decay_gauss = np.exp(-te*1e3 / T2star_vol) 
     
-    for i in range(dims[0]):
-        for j in range(dims[1]):
-            for k in range(dims[2]):
-                decay_gauss[i,j,k] = np.exp(-te*1e3 / T2star_vol[i,j,k]) 
+    #for i in range(dims[0]):
+    #    for j in range(dims[1]):
+    #        for k in range(dims[2]):
+    #            decay_gauss[i,j,k] = np.exp(-te*1e3 / T2star_vol[i,j,k]) 
     # Here important to transform te to be in ms because input is in seconds!
     
     #for i in range(len(dims)):
@@ -129,15 +134,17 @@ def sim_with_texture(pd_vol,T2star_vol, FA, te, deltaB0_vol, gamma, B0, handedne
     if handedness == 'left':
 
         print('handedness=left')
-        phase_factor = -1j * gamma * deltaB0_vol * B0 * 1e-6 * te * 1e-3
+        phase_factor = -1j * gamma * deltaB0_vol * B0 * 1e-6 * te 
         coef = -1j * gamma * B0 * 1e-6 * te
+
         print("Coefficient of phase factor: ", coef)
 
     elif handedness == 'right':
 
         print('handedness=right')
-        phase_factor =  1j * gamma * deltaB0_vol * B0* 1e-6 * te * 1e-3
+        phase_factor =  1j * gamma * deltaB0_vol * B0 * 1e-6 * te 
         coef = 1j * gamma * B0 * 1e-6 * te
+
         print("Coefficient of phase factor: ", coef)
 
     else:
@@ -148,3 +155,7 @@ def sim_with_texture(pd_vol,T2star_vol, FA, te, deltaB0_vol, gamma, B0, handedne
     print("Finished optimized_signal")
 
     return np.abs(signal), np.angle(signal) # Abs for the Magnitude whereas angle for Phase
+
+def simulation_complete(pd_vol,T2star_vol,T1_vol, FA, te, deltaB0_vol, gamma, B0, handedness):
+    # Uses complete equation to simulate Spoiled gradient-recalled-echo data from steady state equation
+    pass
