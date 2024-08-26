@@ -164,7 +164,7 @@ cython_debug/
 
 # We will create many heavy Nifti files that will all go into output/ folder
 # So we want git to ignore this 
-output/
+*/output/
 simulation/
 data/
 example/
