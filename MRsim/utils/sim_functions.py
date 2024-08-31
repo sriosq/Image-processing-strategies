@@ -151,7 +151,8 @@ def sim_with_texture(pd_vol,T2star_vol, FA, te, deltaB0_vol, gamma, B0, handedne
         print('wrong handedness')
     # Phase factor in radians
 
-    signal = pd_vol * np.sin(fa) * decay_gauss * np.exp(phase_factor)
+    signal = pd_vol * decay_gauss * np.exp(phase_factor) # * np.sin(fa) 
+    # Taking out sin(fa) as there is no impact on T1 or TR
     print("Finished optimized_signal")
 
     return np.abs(signal), np.angle(signal) # Abs for the Magnitude whereas angle for Phase
