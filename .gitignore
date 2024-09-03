@@ -168,3 +168,6 @@ cython_debug/
 simulation/
 data/
 example/
+
+# Ignore zip files
+*.zip
