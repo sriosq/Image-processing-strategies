@@ -62,7 +62,7 @@ colorbar;
 voxelGM = [51, 25, 110]; 
 voxelWM= [49, 23, 110];
 voxelCSF = [46, 24, 110];
-voxelAIR = [16,42,110];
+voxelAIR = [16,]
 
 num_echoes = size(phase,4);
 
@@ -70,14 +70,12 @@ num_echoes = size(phase,4);
 valuesGM = zeros(1, num_echoes);
 valuesWM= zeros(1, num_echoes);
 valuesCSF = zeros(1, num_echoes);
-valuesAIR = zeros(1, num_echoes);
 
 % Extract voxel values across echoes
 for echo = 1:num_echoes
     valuesGM(echo) = phase(voxelGM(1), voxelGM(2), voxelGM(3), echo);
     valuesWM(echo) = phase(voxelWM(1), voxelWM(2), voxelWM(3), echo);
     valuesCSF(echo) = phase(voxelCSF(1), voxelCSF(2), voxelCSF(3), echo);
-    valuesAIR(echo) = phase(voxelAIR(1), voxelAIR(2), voxelAIR(3), echo);
 end
 
 % Create a new figure for the plot
@@ -85,10 +83,9 @@ figure;
 
 % Plot values for each voxel
 hold on; % Hold on to plot multiple lines on the same graph
-plot(1:num_echoes, valuesGM, '-o', 'DisplayName', 'Voxel GM'); 
-plot(1:num_echoes, valuesWM, '-s', 'DisplayName', 'Voxel WM'); 
-plot(1:num_echoes, valuesCSF, '-^', 'DisplayName', 'Voxel CSF'); 
-plot(1:num_echoes, valuesAIR, '-v', 'DisplayName', 'Voxel AIR'); 
+plot(1:num_echoes, valuesGM, '-o', 'DisplayName', 'Voxel GM'); % Plot Voxel 1
+plot(1:num_echoes, valuesWM, '-s', 'DisplayName', 'Voxel WM'); % Plot Voxel 2
+plot(1:num_echoes, valuesCSF, '-^', 'DisplayName', 'Voxel CSF'); % Plot Voxel 3
 
 % Customize the plot
 xlabel('Echo Number');
@@ -120,7 +117,7 @@ hold on;
 plot(voxelGM(2), voxelGM(1), 'r+', 'MarkerSize', 10, 'LineWidth', 2); % Plot for GM
 plot(voxelWM(2), voxelWM(1), 'g+', 'MarkerSize', 10, 'LineWidth', 2); % Plot for WM
 plot(voxelCSF(2), voxelCSF(1), 'b+', 'MarkerSize', 10, 'LineWidth', 2); % Plot for CSF
-plot(voxelAIR(2), voxelAIR(1), 'y+', 'MarkerSize', 10, 'LineWidth', 2); % Plot for CSF
+
 % Customize the plot
 xlabel('X (Columns)');
 ylabel('Y (Rows)');

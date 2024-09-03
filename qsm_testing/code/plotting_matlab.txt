@@ -1,0 +1,24 @@
+Plot Markers
+-: Solid line
+--: Dashed line
+:: Dotted line
+-.: Dash-dot line
+o: Circle marker
+s: Square marker
+^: Upward triangle marker
+v: Downward triangle marker
+d: Diamond marker
+p: Pentagon marker
+h: Hexagon marker
+*: Star marker
++: Plus marker
+x: Cross marker
+Colors
+r: Red
+g: Green
+b: Blue
+c: Cyan
+m: Magenta
+y: Yellow
+k: Black
+w: White
