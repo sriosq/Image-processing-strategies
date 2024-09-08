@@ -171,3 +171,6 @@ example/
 
 # Ignore zip files
 *.zip
+
+# Ignore auto-save files from MATLBA
+*.asv
