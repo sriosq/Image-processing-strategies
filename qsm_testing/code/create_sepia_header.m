@@ -20,3 +20,5 @@ TE = [0.0033 0.0052 0.0071];
 % Echo time or list of echo times
 matrixSize = [144, 144, 20]; % The "dimensions" of the image used
 voxelSize = [1.9792, 1.9792, 2]; % Pixdim 
+
+save("header_torso.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
