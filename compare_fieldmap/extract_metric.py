@@ -20,8 +20,8 @@ def extract_metrics(path_to_fm, path_to_sc_seg, path_to_vert_levels, path_to_out
     - path_to_sc_seg (str): Path to the spinal cord segmentation file.
     - path_to_vert_levels (str): Path to the vertebral levels file.
     - path_to_output (str): Path to the output CSV file.
-    - method (str): Method used in extraction (default is "wa").
-    - vert (str): Vertebral levels to process (default is "2:14").
+    - method (str): Method used in extraction (example: "wa").
+    - vert (str): Vertebral levels to process (example: "2:14").
     - perlevel (str): Per-level processing flag (default is "1").
     """
     # Ensure output directory exists
