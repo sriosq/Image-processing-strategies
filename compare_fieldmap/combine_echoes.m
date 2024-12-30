@@ -1,8 +1,8 @@
 % Go to the folder where the data is located
 
-echo1_file = "ASPIRE_brain_three_echo_20240823134311_7_e1.nii.gz";
-echo2_file = "ASPIRE_brain_three_echo_20240823134311_7_e2.nii.gz";
-echo3_file = "ASPIRE_brain_three_echo_20240823134311_7_e3.nii.gz";
+echo1_file = "ASPIRE_cervical_three_echo_insp_20241114161840_10_e1.nii.gz";
+echo2_file = "ASPIRE_cervical_three_echo_insp_20241114161840_10_e2.nii.gz";
+echo3_file = "ASPIRE_cervical_three_echo_insp_20241114161840_10_e3.nii.gz";
 
 % Read the NIfTI images and their header info
 info_echo1 = niftiinfo(echo1_file);
@@ -24,4 +24,4 @@ combined_info.Datatype = class(combined_phase_data);  % Update the datatype if n
 combined_info.PixelDimensions = [info_echo1.PixelDimensions, 3];  % Add echo dimension to pixel dimensions
 
 
-niftiwrite(combined_phase_data, 'brain_complete_mag',combined_info);
+niftiwrite(combined_phase_data, 'cervical_insp_concat_mag',combined_info);
