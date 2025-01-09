@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import nibabel as nib
 from math import pi
+import os
 
 # The code in this section is highly influenced by Chapter 2.5 of QSM RC 2.0
 
@@ -44,7 +45,7 @@ def optimize_measurement(pd_vol, t2s_vol, dims, deltaB0, FA,TE,B0):
 
     return magnitude, phase
 
-def complete_measurement(t1_vol, pd_vol, t2s_vol, dims, deltaB0, FA ,TE, TR, B0):
+def complete_measurement(t1_vol, pd_vol, t2s_vol, dims, deltaB0, FA ,TE, TR, B0, per_echo = 0, outpath=""):
     # This code seeks to accomplish the same as the above method but
     # We are trying to optimize by using volumes
     # TE should be a list, so we create a new volume
@@ -86,7 +87,13 @@ def complete_measurement(t1_vol, pd_vol, t2s_vol, dims, deltaB0, FA ,TE, TR, B0)
         
         magnitude[..., te_idx] = mag
         phase[..., te_idx] = phase_arr
-       
+
+        if per_echo == 1 and outpath != None:
+            if outpath.path.exists()==True:
+                print("Path already exists, change to avoid overwriting")
+            else:
+                temp_img = nib.Nifti1Image(mag)
+
     print("Finished optimize_measurement")
 
     return magnitude, phase
