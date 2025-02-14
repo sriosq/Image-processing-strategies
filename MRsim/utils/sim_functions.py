@@ -45,7 +45,7 @@ def optimize_measurement(pd_vol, t2s_vol, dims, deltaB0, FA,TE,B0):
 
     return magnitude, phase
 
-def complete_measurement(t1_vol, pd_vol, t2s_vol, dims, deltaB0, FA ,TE, TR, B0, per_echo = 0, outpath=""):
+def complete_measurement(t1_vol, pd_vol, t2s_vol, dims, deltaB0, FA ,TE, TR, B0, per_echo = 0, outpath="", handedness = 'left'):
     # This code seeks to accomplish the same as the above method but
     # We are trying to optimize by using volumes
     # TE should be a list, so we create a new volume
@@ -68,7 +68,7 @@ def complete_measurement(t1_vol, pd_vol, t2s_vol, dims, deltaB0, FA ,TE, TR, B0,
 
     # gamma = 42.58 * B0  * 2 * pi  # This is rad*Hz/Tesla 
     gamma_rd_sT = 267.52218744 * 1e6 # In rad/(sec * T) it needs to be 10e5 or 1e6 lol
-    handedness = 'left'
+    
 
     for te_idx, TE_val in enumerate(TE):
         print(f"Processing TE[{te_idx}] = {TE_val}"," [s]")
@@ -225,6 +225,7 @@ def simulation_complete(pd_vol, T2star_vol, T1_vol, FA, te, tr, deltaB0_vol, gam
     fa = np.deg2rad(FA)
     print("sin($/alpha$): ", np.sin(fa))
     
+
     if handedness == 'left':
 
         print('handedness=left')
