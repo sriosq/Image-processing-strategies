@@ -1,8 +1,10 @@
 % Go to the folder where the data is located
+% Make sure you copy the 3 echoes!
+% Important to not get ME data with repeated echoes!
 
-echo1_file = "ASPIRE_cervical_three_echo_insp_20250124141243_6_e1_ph.nii.gz";
-echo2_file = "ASPIRE_cervical_three_echo_insp_20250124141243_6_e2_ph.nii.gz";
-echo3_file = "ASPIRE_cervical_three_echo_insp_20250124141243_6_e3_ph.nii.gz";
+echo1_file = "ASPIRE_cervical_three_echo_insp_20250228140637_4_e1_ph.nii.gz";
+echo2_file = "ASPIRE_cervical_three_echo_insp_20250228140637_4_e2_ph.nii.gz";
+echo3_file = "ASPIRE_cervical_three_echo_insp_20250228140637_4_e3_ph.nii.gz";
 
 % Read the NIfTI images and their header info
 info_echo1 = niftiinfo(echo1_file);
@@ -24,4 +26,4 @@ combined_info.Datatype = class(combined_phase_data);  % Update the datatype if n
 combined_info.PixelDimensions = [info_echo1.PixelDimensions, 3];  % Add echo dimension to pixel dimensions
 
 
-niftiwrite(combined_phase_data, 'cervical_insp_concat_ph',combined_info);
+niftiwrite(combined_phase_data, 'cervical_insp_concat_ph',combined_info,'Compressed',true);
