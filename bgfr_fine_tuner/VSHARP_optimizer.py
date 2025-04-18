@@ -5,8 +5,9 @@ import os
 import nibabel as nib
 import numpy as np
 import sys
+import json
 
-def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol, depth, peel):
+def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_radii, min_radii):
     eng = matlab.engine.start_matlab()
 
     sepia_path = "D:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
@@ -23,10 +24,12 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol,
     medi_sama = eng.genpath(path_to_MEDI_tb)
     eng.addpath(medi_sama, nargout = 0)
 
-    #  LBV Parameters
-    tolerance = tol
-    depth = depth
-    peel = peel
+    #  VSHARP parameters
+    max_radii = int(np.round(max_radii))
+    min_radii = int(np.round(min_radii)-1)# We need to substract 1 to include the min_radii in the list
+    
+    radius_list = list(range(max_radii,min_radii,-1))
+    radius_matlab = matlab.double(radius_list)
 
     bfr_params = {  # Example method name
     
@@ -36,22 +39,19 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol,
         'isRefineBrainMask' : '0'
     },
     'bfr':{
-    'method': "LBV",
-    'tol': float(tolerance),
-    'depth': float(depth),
-    'peel': float(peel),
+    'method': "VSHARP",
     "refine_method" : "None",
     "refine_order" : 4,
     'erode_radius': 0,
-  'erode_before_radius': 0}
-
+    'erode_before_radius': 0,
+    'radius':radius_matlab}
     }   
 
-    eng.python_wrapper(in1, in2, in3, in4 , output_basename, mask_filename, bfr_params, nargout = 0)
+    eng.python_wrapper(in1, in2, in3, in4 , 'VSHARP', output_basename, mask_filename, bfr_params, nargout = 0)
     print("Local Field Created! Calculate metrics and update parameters!")
 
 
-def load_masks(test_fn):
+def configure_expiremnt_run(test_fn):
     global gm_mask_data, wm_mask_data, iter_folder
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing/gm_mask_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
@@ -59,8 +59,12 @@ def load_masks(test_fn):
     wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing/wm_mask_crop.nii.gz")
     wm_mask_data = wm_mask_img.get_fdata()
 
-    iter_folder = rf"e:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\iter_LBV/{test_fn}"
-    
+    iter_folder = rf"e:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\iter_VSHARP/{test_fn}"
+   
+    if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
+        print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
+        sys.exit(1)
+  
     print("GM and WM masks loaded successfully.")
 
 def load_groun_truth_data():
@@ -75,9 +79,8 @@ def lbv_optimizer(x):
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
 
-    tolerance = x.get_coord(0)
-    depth = x.get_coord(1)
-    peel = x.get_coord(2)
+    max_radii = x.get_coord(0)
+    min_radii = x.get_coord(1)
     
     iteration_fn = f"lbv_run{counter}/"
 
@@ -98,8 +101,8 @@ def lbv_optimizer(x):
     in3 = ""
     in4 = custom_header_path
 
-    create_local_field(in1, in2, in3, in4, output_fn, mask_filename, tolerance, depth, peel)
-    
+    create_local_field(in1, in2, in3, in4, output_fn, mask_filename, max_radii, min_radii)
+    # Import local field for RMSE calculation
     new_local_field_path = os.path.join(iter_folder,iteration_fn + "Sepia_localfield.nii.gz")
     
     print("Local field import from:", new_local_field_path)
@@ -146,7 +149,23 @@ def lbv_optimizer(x):
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
 
-    print(f"Iter {counter}: Tolerance={tolerance}, Depth={depth}, Peel={peel}, GM-WM RMSE={objective_value}")
+    print(f"Iter {counter}: Max radii={max_radii}, Min radii ={min_radii}, GM-WM RMSE={objective_value}")
+
+
+    # Data to save
+    sidecar_data = {
+        'iteration': counter,
+        'max_radii': float(max_radii),
+        'min_radii': float(min_radii),
+        'wm_RMSE': float(wm_rmse),
+        'gm_RMSE': float(gm_rmse),
+        'objective_value': float(objective_value)
+    }
+    # We want this to be saved in the precie run so:
+    json_filename = os.path.join(iter_folder, iteration_fn, "sidecar_data.json")
+    with open(json_filename, 'w') as json_file:
+        json.dump(sidecar_data, json_file, indent=4)
+    print("Sidecar data saved to:", json_filename)
 
     rawBBO = str(objective_value)
     x.setBBO(rawBBO.encode("UTF-8"))
@@ -156,23 +175,23 @@ def lbv_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 3",
+    "DIMENSION 2",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 30",
+    "MAX_BB_EVAL 10",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
 ]
+# For VSHARP the x0 should be [max_radii, min_radii]
+x0 = [10, 3]
 
-x0 = [0.0001,5,2]
+lb = [0, 1]
 
-lb = [0.000001, -1, 0.1]
-
-ub=[1,5,5]
+ub=[20, 19]
 
 counter = 0
 
-load_masks("RMSE_test1_30_evals")
+configure_expiremnt_run("RMSE_test2_30_evals_w_jsonsidecar")
 load_groun_truth_data()
 
 result = nomad.optimize(lbv_optimizer,x0,lb,ub,nomad_params)

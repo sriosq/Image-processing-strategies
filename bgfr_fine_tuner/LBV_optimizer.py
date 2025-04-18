@@ -5,6 +5,7 @@ import os
 import nibabel as nib
 import numpy as np
 import sys
+import json
 
 def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol, depth, peel):
     eng = matlab.engine.start_matlab()
@@ -51,7 +52,7 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol,
     print("Local Field Created! Calculate metrics and update parameters!")
 
 
-def load_masks(test_fn):
+def configure_expiremnt_run(test_fn):
     global gm_mask_data, wm_mask_data, iter_folder
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing/gm_mask_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
@@ -61,6 +62,10 @@ def load_masks(test_fn):
 
     iter_folder = rf"e:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\iter_LBV/{test_fn}"
     
+    if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
+        print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
+        sys.exit(1)
+
     print("GM and WM masks loaded successfully.")
 
 def load_groun_truth_data():
@@ -99,7 +104,7 @@ def lbv_optimizer(x):
     in4 = custom_header_path
 
     create_local_field(in1, in2, in3, in4, output_fn, mask_filename, tolerance, depth, peel)
-    
+    # Import local field for RMSE calculation
     new_local_field_path = os.path.join(iter_folder,iteration_fn + "Sepia_localfield.nii.gz")
     
     print("Local field import from:", new_local_field_path)
@@ -148,6 +153,22 @@ def lbv_optimizer(x):
 
     print(f"Iter {counter}: Tolerance={tolerance}, Depth={depth}, Peel={peel}, GM-WM RMSE={objective_value}")
 
+        # Data to save
+    sidecar_data = {
+        'iteration': counter,
+        'tolerance': float(tolerance),
+        'depth': float(depth),
+        'peel': float(peel),
+        'wm_RMSE': float(wm_rmse),
+        'gm_RMSE': float(gm_rmse),
+        'objective_value': float(objective_value)
+    }
+    # We want this to be saved in the precie run so:
+    json_filename = os.path.join(iter_folder, iteration_fn, "sidecar_data.json")
+    with open(json_filename, 'w') as json_file:
+        json.dump(sidecar_data, json_file, indent=4)
+    print("Sidecar data saved to:", json_filename)
+
     rawBBO = str(objective_value)
     x.setBBO(rawBBO.encode("UTF-8"))
 
@@ -164,7 +185,8 @@ nomad_params = [
     "DISPLAY_STATS BBE OBJ"
 ]
 
-x0 = [0.0001,5,2]
+# For LBV the x0 should be [tolerance, depth, peel]
+x0 = [0.0001, 5, 2]
 
 lb = [0.000001, -1, 0.1]
 
@@ -172,7 +194,7 @@ ub=[1,5,5]
 
 counter = 0
 
-load_masks("RMSE_test1_30_evals")
+configure_expiremnt_run("RMSE_test1_30_evals")
 load_groun_truth_data()
 
 result = nomad.optimize(lbv_optimizer,x0,lb,ub,nomad_params)
