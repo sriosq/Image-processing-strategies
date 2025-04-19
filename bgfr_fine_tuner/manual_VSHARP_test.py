@@ -51,7 +51,6 @@ iteration_fn = f"lbv_run{counter}/"
 iter_folder = r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\manual_testing_vsharp"
 
 
-
 output_basename = str(os.path.join(iter_folder,iteration_fn+"Sepia"))
 if not os.path.exists(output_basename):
     os.makedirs(output_basename)
