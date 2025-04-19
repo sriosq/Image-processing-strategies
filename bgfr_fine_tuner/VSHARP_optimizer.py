@@ -31,7 +31,7 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_
     radius_list = list(range(max_radii,min_radii,-1))
     radius_matlab = matlab.double(radius_list)
 
-    bfr_params = {  # Example method name
+    bfr_params = {
     
     'general' : {
         'isBET' : '0',
@@ -51,7 +51,7 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_
     print("Local Field Created! Calculate metrics and update parameters!")
 
 
-def configure_expiremnt_run(test_fn):
+def configure_experiment_run(test_fn):
     global gm_mask_data, wm_mask_data, iter_folder
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing/gm_mask_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
@@ -73,7 +73,7 @@ def load_groun_truth_data():
     # This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
 
-def lbv_optimizer(x):
+def vsharp_optimizer(x):
     global counter
 
     #matrix_Size = [301, 351, 128]
@@ -183,7 +183,7 @@ nomad_params = [
     "DISPLAY_STATS BBE OBJ"
 ]
 # For VSHARP the x0 should be [max_radii, min_radii]
-x0 = [10, 3]
+x0 = [10, 3] # Recommended by SEPIA (for brain)
 
 lb = [0, 1]
 
@@ -191,10 +191,10 @@ ub=[20, 19]
 
 counter = 0
 
-configure_expiremnt_run("RMSE_test2_30_evals_w_jsonsidecar")
+configure_experiment_run("RMSE_test2_30_evals_w_jsonsidecar")
 load_groun_truth_data()
 
-result = nomad.optimize(lbv_optimizer,x0,lb,ub,nomad_params)
+result = nomad.optimize(vsharp_optimizer, x0, lb, ub, nomad_params)
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]
 output = "\n".join(fmt)

@@ -7,7 +7,7 @@ import numpy as np
 import sys
 import json
 
-def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol, depth, peel):
+def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol, num_iters, padSize):
     eng = matlab.engine.start_matlab()
 
     sepia_path = "D:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
@@ -26,8 +26,8 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol,
 
     #  LBV Parameters
     tolerance = tol
-    depth = depth
-    peel = peel
+    iterations = num_iters
+    padSize = padSize
 
     bfr_params = {
     
@@ -37,10 +37,10 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol,
         'isRefineBrainMask' : '0'
     },
     'bfr':{
-    'method': "LBV",
-    'tol': float(tolerance),
-    'depth': float(depth),
-    'peel': float(peel),
+    'method': "PDF",
+    'tol': tolerance,
+    'iteration': iterations,
+    'padSize': padSize,
     "refine_method" : "None",
     "refine_order" : 4,
     'erode_radius': 0,
@@ -48,7 +48,7 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol,
 
     }   
 
-    eng.python_wrapper(in1, in2, in3, in4 , 'LBV', output_basename, mask_filename, bfr_params, nargout = 0)
+    eng.python_wrapper(in1, in2, in3, in4 , 'PDF', output_basename, mask_filename, bfr_params, nargout = 0)
     print("Local Field Created! Calculate metrics and update parameters!")
 
 
@@ -60,7 +60,7 @@ def configure_experiment_run(test_fn):
     wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing/wm_mask_crop.nii.gz")
     wm_mask_data = wm_mask_img.get_fdata()
 
-    iter_folder = rf"e:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\iter_LBV/{test_fn}"
+    iter_folder = rf"e:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\iter_PDF/{test_fn}"
     
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -74,15 +74,15 @@ def load_groun_truth_data():
     # This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
 
-def lbv_optimizer(x):
+def pdf_optimizer(x):
     global counter
 
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
 
     tolerance = x.get_coord(0)
-    depth = x.get_coord(1)
-    peel = x.get_coord(2)
+    num_iters = x.get_coord(1)
+    padSize = x.get_coord(2)
     
     iteration_fn = f"lbv_run{counter}/"
 
@@ -103,7 +103,7 @@ def lbv_optimizer(x):
     in3 = ""
     in4 = custom_header_path
 
-    create_local_field(in1, in2, in3, in4, output_fn, mask_filename, tolerance, depth, peel)
+    create_local_field(in1, in2, in3, in4, output_fn, mask_filename, tolerance, num_iters, padSize)
     # Import local field for RMSE calculation
     new_local_field_path = os.path.join(iter_folder,iteration_fn + "Sepia_localfield.nii.gz")
     
@@ -151,14 +151,14 @@ def lbv_optimizer(x):
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
 
-    print(f"Iter {counter}: Tolerance={tolerance}, Depth={depth}, Peel={peel}, GM-WM RMSE={objective_value}")
+    print(f"Iter {counter}: Tolerance={tolerance}, Number of iterations(PDF)={num_iters}, Pad Size={padSize}, GM-WM RMSE={objective_value}")
 
         # Data to save
     sidecar_data = {
         'iteration': counter,
         'tolerance': float(tolerance),
-        'depth': float(depth),
-        'peel': float(peel),
+        'number of iterations (PDF)': float(num_iters),
+        'Pad Size': float(padSize),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
@@ -179,25 +179,25 @@ def lbv_optimizer(x):
 nomad_params = [
     "DIMENSION 3",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 30",
+    "MAX_BB_EVAL 10",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
 ]
 
-# For LBV the x0 should be [tolerance, depth, peel]
-x0 = [0.0001, 5, 2] # Recommended by SEPIA (for brain)
+# For PDF the x0 should be [tolerance, num_iters, padSize]
+x0 = [0.1, 50, 40] # Recommended by SEPIA (for brain)
 
-lb = [0.000001, -1, 0.1]
+lb = [0.0001, 10, 0]
 
-ub=[1, 5, 5]
+ub=[0.1, 1000, 100]
 
 counter = 0
 
-configure_experiment_run("RMSE_test1_30_evals")
+configure_experiment_run("RMSE_test1_10_evals")
 load_groun_truth_data()
 
-result = nomad.optimize(lbv_optimizer, x0, lb, ub, nomad_params)
+result = nomad.optimize(pdf_optimizer,x0,lb,ub,nomad_params)
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]
 output = "\n".join(fmt)
