@@ -179,7 +179,7 @@ def pdf_optimizer(x):
 nomad_params = [
     "DIMENSION 3",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 10",
+    "MAX_BB_EVAL 100",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
@@ -188,13 +188,13 @@ nomad_params = [
 # For PDF the x0 should be [tolerance, num_iters, padSize]
 x0 = [0.1, 50, 40] # Recommended by SEPIA (for brain)
 
-lb = [0.0001, 10, 0]
+lb = [0.000001, 10, 0]
 
 ub=[0.1, 1000, 100]
 
 counter = 0
 
-configure_experiment_run("RMSE_test1_10_evals")
+configure_experiment_run("RMSE_test2_100_evals")
 load_groun_truth_data()
 
 result = nomad.optimize(pdf_optimizer,x0,lb,ub,nomad_params)

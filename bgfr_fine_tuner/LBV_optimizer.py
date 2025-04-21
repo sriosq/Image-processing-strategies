@@ -179,7 +179,7 @@ def lbv_optimizer(x):
 nomad_params = [
     "DIMENSION 3",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 30",
+    "MAX_BB_EVAL 100",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
@@ -188,13 +188,13 @@ nomad_params = [
 # For LBV the x0 should be [tolerance, depth, peel]
 x0 = [0.0001, 5, 2] # Recommended by SEPIA (for brain)
 
-lb = [0.000001, -1, 0.1]
+lb = [0.000001, -5, 0.01]
 
-ub=[1, 5, 5]
+ub=[0.1, 10, 5]
 
 counter = 0
 
-configure_experiment_run("RMSE_test1_30_evals")
+configure_experiment_run("RMSE_test2_100_evals")
 load_groun_truth_data()
 
 result = nomad.optimize(lbv_optimizer, x0, lb, ub, nomad_params)

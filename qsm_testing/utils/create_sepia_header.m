@@ -41,7 +41,7 @@ voxelSize = [1, 1, 1]; % Pixdim
 
 save("2choes_dB0_030.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
-%% 
+%% Swiss invivo simulation header
 TE = [6.86, 13.14, 19.42, 25.7, 31.98];
 B0 = 3;
 B0_dir = [0;0;1];
@@ -51,6 +51,17 @@ matrixSize = [301, 351, 128]; % The "dimensions" of the image used
 voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim 
 
 save("swiss_qsm_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+
+%% Custom TEs with Swiss acq FOV
+TE = [1, 2, 3, 4, 5, 10, 15, 20, 30, 40] ;
+B0 = 3;
+B0_dir = [0;0;1];
+CF = 127740000;
+% Echo time or list of echo times
+matrixSize = [301, 351, 128]; % The "dimensions" of the image used
+voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim 
+
+save("custom_qsm_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
 
 

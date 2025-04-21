@@ -177,7 +177,7 @@ def vsharp_optimizer(x):
 nomad_params = [
     "DIMENSION 2",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 10",
+    "MAX_BB_EVAL 100",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
@@ -187,11 +187,11 @@ x0 = [10, 3] # Recommended by SEPIA (for brain)
 
 lb = [0, 1]
 
-ub=[20, 19]
+ub=[40, 39]
 
 counter = 0
 
-configure_experiment_run("RMSE_test2_30_evals_w_jsonsidecar")
+configure_experiment_run("RMSE_test3_100_evals_w_jsonsidecar")
 load_groun_truth_data()
 
 result = nomad.optimize(vsharp_optimizer, x0, lb, ub, nomad_params)
