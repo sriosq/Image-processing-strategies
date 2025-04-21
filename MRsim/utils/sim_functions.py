@@ -6,7 +6,7 @@ import os
 
 # The code in this section is highly influenced by Chapter 2.5 of QSM RC 2.0
 
-def complete_measurement(t1_vol, pd_vol, t2s_vol, dims, deltaB0, FA ,TE, TR, B0, per_echo = 0, outpath="", handedness = 'left'):
+def complete_measurement(t1_vol, pd_vol, t2s_vol, dims, deltaB0, FA ,TE, TR, B0, per_echo = 0, outpath="", handedness='right'):
     # T1, PD and T2* volumes assumed to have values in [ms]
     # dB0 is the Fieldmap in [ppm]
     # Flip angle input in degrees
