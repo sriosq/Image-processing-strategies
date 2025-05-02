@@ -84,7 +84,7 @@ def pdf_optimizer(x):
     num_iters = x.get_coord(1)
     padSize = x.get_coord(2)
     
-    iteration_fn = f"lbv_run{counter}/"
+    iteration_fn = f"pdf_run{counter}/"
 
     output_fn = str(os.path.join(iter_folder,iteration_fn+"Sepia"))
 

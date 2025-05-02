@@ -7,7 +7,7 @@ import numpy as np
 import sys
 import json
 
-def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_radii, min_radii):
+def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, thr):
     eng = matlab.engine.start_matlab()
 
     sepia_path = "D:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
@@ -24,30 +24,25 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_
     medi_sama = eng.genpath(path_to_MEDI_tb)
     eng.addpath(medi_sama, nargout = 0)
 
-    #  VSHARP parameters
-    max_radii = int(np.round(max_radii))
-    min_radii = int(np.round(min_radii)-1)# We need to substract 1 to include the min_radii in the list
+    #  TKD parameters
     
-    radius_list = list(range(max_radii,min_radii,-1))
-    radius_matlab = matlab.double(radius_list)
+    threshold = thr
 
-    bfr_params = {
+    dipole_inv_params = {  
     
     'general' : {
         'isBET' : '0',
         'isInvert':'0',
         'isRefineBrainMask' : '0'
     },
-    'bfr':{
-    'method': "VSHARP",
-    "refine_method" : "None",
-    "refine_order" : 4,
-    'erode_radius': 0,
-    'erode_before_radius': 0,
-    'radius':radius_matlab}
-    }   
+    'qsm':{
+    'reference_tissue': "Brain mask",
+    "method": "TKD",
+    'threshold':threshold}
 
-    eng.python_wrapper(in1, in2, in3, in4 , 'VSHARP', output_basename, mask_filename, bfr_params, nargout = 0)
+}
+
+    eng.python_wrapper(in1, in2, in3, in4 , 'TKD', output_basename, mask_filename, dipole_inv_params, nargout = 0)
     print("Local Field Created! Calculate metrics and update parameters!")
 
 
@@ -59,7 +54,7 @@ def configure_experiment_run(test_fn):
     wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing/wm_mask_crop.nii.gz")
     wm_mask_data = wm_mask_img.get_fdata()
 
-    iter_folder = rf"e:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\iter_VSHARP/{test_fn}"
+    iter_folder = rf"e:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\dipole_inversion_tests\iter_TKD/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -67,22 +62,21 @@ def configure_experiment_run(test_fn):
   
     print("GM and WM masks loaded successfully.")
 
-def load_groun_truth_data():
-    global wb_gt_csf_ref_swiss_crop_fm_Hz_data
-    wb_gt_csf_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\local_field_groud_truth\ref_csf/wb_gt_csf_ref_swiss_crop_fm_Hz.nii.gz").get_fdata()
+def load_groun_truth_chidist_data():
+    global wb_gt_csf_ref_swiss_crop_chidist_data
+    wb_gt_csf_ref_swiss_crop_chidist_data = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\local_field_groud_truth\ref_csf/wt_gt_chi_ref_CSF_swiss_crop_chi_dist.nii.gz").get_fdata()
     # This loads the Ground truth image with the Swiss Acq. Parameters FOV
-    print("Ground truth local field loaded")
+    print("Ground truth piecewise susceptibility map loaded")
 
-def vsharp_optimizer(x):
+def tkd_optimizer(x):
     global counter
 
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
 
-    max_radii = x.get_coord(0)
-    min_radii = x.get_coord(1)
+    thr = x.get_coord(0)
     
-    iteration_fn = f"vsharp_run{counter}/"
+    iteration_fn = f"tkd_run{counter}/"
 
     output_fn = str(os.path.join(iter_folder,iteration_fn+"Sepia"))
 
@@ -92,26 +86,26 @@ def vsharp_optimizer(x):
     
     print("Output FN used:", output_fn)
 
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\fm_tests\test2_apply_msk/B0.nii")
+    best_local_fiel_path = str(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\iter_PDF\RMSE_test2_100_evals\lbv_run94/Sepia_localfield.nii.gz")
     custom_header_path = str(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params/custom_qsm_sim.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params/cord_mask_crop.nii.gz")
     
-    in1 = custom_fm_path
+    in1 = best_local_fiel_path
     in2 = ""
     in3 = ""
     in4 = custom_header_path
 
-    create_local_field(in1, in2, in3, in4, output_fn, mask_filename, max_radii, min_radii)
+    create_chimap(in1, in2, in3, in4, output_fn, mask_filename, thr)
     # Import local field for RMSE calculation
-    new_local_field_path = os.path.join(iter_folder,iteration_fn + "Sepia_localfield.nii.gz")
+    new_chimap_path = os.path.join(iter_folder,iteration_fn + "Sepia_chimap.nii.gz")
     
-    print("Local field import from:", new_local_field_path)
+    print("Chimap imported from:", new_chimap_path)
 
-    local_field_img = nib.load(new_local_field_path)
-    local_field_data = local_field_img.get_fdata()
+    chimap_img = nib.load(new_chimap_path)
+    chimap_data = chimap_img.get_fdata()
 
     # Now, we compute the difference between current local field with the Ground Truth
-    pixel_wise_difference = wb_gt_csf_ref_swiss_crop_fm_Hz_data - local_field_data
+    pixel_wise_difference = wb_gt_csf_ref_swiss_crop_chidist_data - chimap_data
     gm_diff = pixel_wise_difference[gm_mask_data==1]
     wm_diff = pixel_wise_difference[wm_mask_data==1]
 
@@ -149,14 +143,12 @@ def vsharp_optimizer(x):
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
 
-    print(f"Iter {counter}: Max radii={max_radii}, Min radii ={min_radii}, GM-WM RMSE={objective_value}")
-
+    print(f"Iter {counter}: Threshold={thr}, GM-WM RMSE={objective_value}")
 
     # Data to save
     sidecar_data = {
         'iteration': counter,
-        'max_radii': float(max_radii),
-        'min_radii': float(min_radii),
+        'threshold': float(thr),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
@@ -175,26 +167,26 @@ def vsharp_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 2",
+    "DIMENSION 1",
     "BB_OUTPUT_TYPE OBJ",
     "MAX_BB_EVAL 100",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
 ]
-# For VSHARP the x0 should be [max_radii, min_radii]
-x0 = [10, 3] # Recommended by SEPIA (for brain)
+# For TKD the x0 should be threshold
+x0 = [0.15] # Recommended by SEPIA (for brain)
 
-lb = [0, 1]
+lb = [0.00001]
 
-ub=[40, 39]
+ub = [1]
 
 counter = 0
 
-configure_experiment_run("RMSE_test3_100_evals_w_jsonsidecar")
-load_groun_truth_data()
+configure_experiment_run("RMSE_test1_100_evals_w_jsonsidecar")
+load_groun_truth_chidist_data()
 
-result = nomad.optimize(vsharp_optimizer, x0, lb, ub, nomad_params)
+result = nomad.optimize(tkd_optimizer, x0, lb, ub, nomad_params)
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]
 output = "\n".join(fmt)

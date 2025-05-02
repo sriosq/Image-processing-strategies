@@ -7,7 +7,7 @@ import numpy as np
 import sys
 import json
 
-def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_radii, min_radii):
+def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, radius, thr):
     eng = matlab.engine.start_matlab()
 
     sepia_path = "D:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
@@ -24,12 +24,10 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_
     medi_sama = eng.genpath(path_to_MEDI_tb)
     eng.addpath(medi_sama, nargout = 0)
 
-    #  VSHARP parameters
-    max_radii = int(np.round(max_radii))
-    min_radii = int(np.round(min_radii)-1)# We need to substract 1 to include the min_radii in the list
-    
-    radius_list = list(range(max_radii,min_radii,-1))
-    radius_matlab = matlab.double(radius_list)
+    #  iHARPERELLA parameters
+    rad = radius
+    threshold = thr # regularization parameter
+    method = "SHARP"
 
     bfr_params = {
     
@@ -39,15 +37,16 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_
         'isRefineBrainMask' : '0'
     },
     'bfr':{
-    'method': "VSHARP",
+    'method': method,
     "refine_method" : "None",
     "refine_order" : 4,
     'erode_radius': 0,
     'erode_before_radius': 0,
-    'radius':radius_matlab}
+    'radius':rad,
+    'threshold': threshold}
     }   
 
-    eng.python_wrapper(in1, in2, in3, in4 , 'VSHARP', output_basename, mask_filename, bfr_params, nargout = 0)
+    eng.python_wrapper(in1, in2, in3, in4 , method, output_basename, mask_filename, bfr_params, nargout = 0)
     print("Local Field Created! Calculate metrics and update parameters!")
 
 
@@ -59,7 +58,7 @@ def configure_experiment_run(test_fn):
     wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing/wm_mask_crop.nii.gz")
     wm_mask_data = wm_mask_img.get_fdata()
 
-    iter_folder = rf"e:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\iter_VSHARP/{test_fn}"
+    iter_folder = rf"e:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\iter_sharp/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -73,16 +72,16 @@ def load_groun_truth_data():
     # This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
 
-def vsharp_optimizer(x):
+def resharp_optimizer(x):
     global counter
 
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
 
-    max_radii = x.get_coord(0)
-    min_radii = x.get_coord(1)
-    
-    iteration_fn = f"vsharp_run{counter}/"
+    radius = x.get_coord(0)
+    thr = x.get_coord(1)
+
+    iteration_fn = f"sharp_run{counter}/"
 
     output_fn = str(os.path.join(iter_folder,iteration_fn+"Sepia"))
 
@@ -101,7 +100,7 @@ def vsharp_optimizer(x):
     in3 = ""
     in4 = custom_header_path
 
-    create_local_field(in1, in2, in3, in4, output_fn, mask_filename, max_radii, min_radii)
+    create_local_field(in1, in2, in3, in4, output_fn, mask_filename, radius, thr)
     # Import local field for RMSE calculation
     new_local_field_path = os.path.join(iter_folder,iteration_fn + "Sepia_localfield.nii.gz")
     
@@ -149,14 +148,14 @@ def vsharp_optimizer(x):
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
 
-    print(f"Iter {counter}: Max radii={max_radii}, Min radii ={min_radii}, GM-WM RMSE={objective_value}")
+    print(f"Iter {counter}: Radius: {radius}, Threshold: {thr}, GM-WM RMSE = {objective_value}")
 
 
     # Data to save
     sidecar_data = {
         'iteration': counter,
-        'max_radii': float(max_radii),
-        'min_radii': float(min_radii),
+        'Radius' : float(radius),
+        'Threshold': float(thr),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
@@ -182,19 +181,19 @@ nomad_params = [
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
 ]
-# For VSHARP the x0 should be [max_radii, min_radii]
-x0 = [10, 3] # Recommended by SEPIA (for brain)
+# For sharp the x0 should be [SMV radius (in voxels), threshold]
+x0 = [4, 0.03] # Recommended by SEPIA (for brain)
 
-lb = [0, 1]
+lb = [1, 0.0001]
 
-ub=[40, 39]
+ub=[10, 0.1]
 
 counter = 0
 
-configure_experiment_run("RMSE_test3_100_evals_w_jsonsidecar")
+configure_experiment_run("RMSE_test1_100_evals_w_jsonsidecar")
 load_groun_truth_data()
 
-result = nomad.optimize(vsharp_optimizer, x0, lb, ub, nomad_params)
+result = nomad.optimize(resharp_optimizer, x0, lb, ub, nomad_params)
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]
 output = "\n".join(fmt)
