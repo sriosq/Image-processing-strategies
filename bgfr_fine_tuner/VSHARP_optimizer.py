@@ -6,21 +6,22 @@ import nibabel as nib
 import numpy as np
 import sys
 import json
+import time
 
 def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_radii, min_radii):
     eng = matlab.engine.start_matlab()
 
-    sepia_path = "D:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
-    xtra_tb_path = "D:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes"
+    sepia_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
+    xtra_tb_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes"
 
     eng.addpath(sepia_path)
-    bfr_wrappers = eng.genpath("D:/Poly_MSc_Code/libraries_and_toolboxes/sepia/wrapper")
+    bfr_wrappers = eng.genpath("R:/Poly_MSc_Code/libraries_and_toolboxes/sepia/wrapper")
     eng.addpath(bfr_wrappers, nargout=0)
 
-    all_funcs = eng.genpath("D:/Poly_MSc_Code/libraries_and_toolboxes/sepia")
+    all_funcs = eng.genpath("R:/Poly_MSc_Code/libraries_and_toolboxes/sepia")
     eng.addpath(all_funcs, nargout=0)
 
-    path_to_MEDI_tb = "D:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes/MEDI_toolbox"
+    path_to_MEDI_tb = "R:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes/MEDI_toolbox"
     medi_sama = eng.genpath(path_to_MEDI_tb)
     eng.addpath(medi_sama, nargout = 0)
 
@@ -52,26 +53,53 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_
 
 
 def configure_experiment_run(test_fn):
-    global gm_mask_data, wm_mask_data, iter_folder
-    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing/gm_mask_crop.nii.gz")
+    global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
+    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/gm_mask_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
 
-    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing/wm_mask_crop.nii.gz")
+    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/wm_mask_crop.nii.gz")
     wm_mask_data = wm_mask_img.get_fdata()
 
-    iter_folder = rf"e:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\BGFR_tests\iter_VSHARP/{test_fn}"
+    print("GM and WM masks loaded successfully.")
+
+    iter_folder = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\bgfr_opt\iter_VSHARP/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
         sys.exit(1)
+    else:
+        os.makedirs(iter_folder, exist_ok=True)
+        print("Experiment folder created!")
+
+    txt_file_path = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\bgfr_opt\iter_VSHARP/{test_fn}.txt"
+    with open(txt_file_path, 'w') as file:
+        file.write("Optimization results.\n")
+        
+    print("Results file created at:", txt_file_path)
   
-    print("GM and WM masks loaded successfully.")
+    
 
 def load_groun_truth_data():
-    global wb_gt_csf_ref_swiss_crop_fm_Hz_data
-    wb_gt_csf_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\local_field_groud_truth\ref_csf/wb_gt_csf_ref_swiss_crop_fm_Hz.nii.gz").get_fdata()
+    global wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data
+    wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\gt_ref_avg_sc\gt_gauss_lf_Hz_swiss_crop.nii.gz").get_fdata()
     # This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
+
+def log_best_solution(obj_value, iteration, max_radii, min_radii, gm_rmse, wm_rmse):
+    global best_obj_value
+    total_rmse = gm_rmse + wm_rmse
+    if obj_value <= best_obj_value:
+        if obj_value == best_obj_value:
+            print("Found a solution with the same objective value, but different parameters.")
+            with open(txt_file_path, 'a') as file:
+            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Max radii: {max_radii}, Min radii: {min_radii}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+
+        best_obj_value = obj_value
+        
+        print(f"New best solution found: {obj_value}")
+        
+        with open(txt_file_path, 'a') as file:
+            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Max radii: {max_radii}, Min radii: {min_radii}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
 
 def vsharp_optimizer(x):
     global counter
@@ -92,9 +120,11 @@ def vsharp_optimizer(x):
     
     print("Output FN used:", output_fn)
 
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\fm_tests\test2_apply_msk/B0.nii")
-    custom_header_path = str(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params/custom_qsm_sim.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params/cord_mask_crop.nii.gz")
+    #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test2_msk_apply/B0.nii")
+    # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
+    custom_header_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal/custom_qsm_sim.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/cord_mask_crop.nii.gz")
     
     in1 = custom_fm_path
     in2 = ""
@@ -103,7 +133,7 @@ def vsharp_optimizer(x):
 
     create_local_field(in1, in2, in3, in4, output_fn, mask_filename, max_radii, min_radii)
     # Import local field for RMSE calculation
-    new_local_field_path = os.path.join(iter_folder,iteration_fn + "Sepia_localfield.nii.gz")
+    new_local_field_path = os.path.join(iter_folder, iteration_fn + "Sepia_localfield.nii.gz")
     
     print("Local field import from:", new_local_field_path)
 
@@ -111,7 +141,7 @@ def vsharp_optimizer(x):
     local_field_data = local_field_img.get_fdata()
 
     # Now, we compute the difference between current local field with the Ground Truth
-    pixel_wise_difference = wb_gt_csf_ref_swiss_crop_fm_Hz_data - local_field_data
+    pixel_wise_difference = wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data - local_field_data
     gm_diff = pixel_wise_difference[gm_mask_data==1]
     wm_diff = pixel_wise_difference[wm_mask_data==1]
 
@@ -148,9 +178,10 @@ def vsharp_optimizer(x):
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
+    # Try to log the best solution
+    log_best_solution(objective_value, counter, max_radii, min_radii, gm_rmse, wm_rmse)
 
-    print(f"Iter {counter}: Max radii={max_radii}, Min radii ={min_radii}, GM-WM RMSE={objective_value}")
-
+    print(f"Iter {counter}: Max radii={max_radii}, Min radii ={min_radii}, GM+WM RMSE={objective_value}")
 
     # Data to save
     sidecar_data = {
@@ -176,22 +207,31 @@ def vsharp_optimizer(x):
 
 nomad_params = [
     "DIMENSION 2",
+    "BB_INPUT_TYPE (I I)",
     "BB_OUTPUT_TYPE OBJ",
     "MAX_BB_EVAL 100",
     "DISPLAY_DEGREE 2",
+    #"STATS_FILE nomad_stats_test2_vsharp.txt $ BBE $ ( SOL )  & $ %.5EOBJ $ ( TIME )",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
 ]
 # For VSHARP the x0 should be [max_radii, min_radii]
+# With our image, the largest axis is 343 mm and the smallest is 300 mm
+# To ensure the largest kernel fits withing the image, upper bound for a should be smallest image dimension/2
+# In this case 300/2 = 150
+start_time = time.time()
 x0 = [10, 3] # Recommended by SEPIA (for brain)
+# I think the best would be to start with the largest kernel and then decrease it
+#x0_largest = [150, 1] # This is the radii list
 
-lb = [0, 1]
+lb = [2, 1]
 
-ub=[40, 39]
+ub=[150, 149]
 
 counter = 0
 
-configure_experiment_run("RMSE_test3_100_evals_w_jsonsidecar")
+configure_experiment_run("RMSE_test1_masked_fm_100_evals")
+best_obj_value = float('inf')
 load_groun_truth_data()
 
 result = nomad.optimize(vsharp_optimizer, x0, lb, ub, nomad_params)
@@ -199,3 +239,7 @@ result = nomad.optimize(vsharp_optimizer, x0, lb, ub, nomad_params)
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]
 output = "\n".join(fmt)
 print("\nNOMAD results \n" + output + " \n")
+
+end_time = time.time()
+elapsed_time = end_time - start_time
+print(f"Optimization complete in: {elapsed_time:.3f} seconds")
