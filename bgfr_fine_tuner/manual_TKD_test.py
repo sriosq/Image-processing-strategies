@@ -6,17 +6,17 @@ import nibabel as nib
 
 eng = matlab.engine.start_matlab()
 
-sepia_path = "D:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
-xtra_tb_path = "D:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes"
+sepia_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
+xtra_tb_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes"
 
 eng.addpath(sepia_path)
-bfr_wrappers = eng.genpath("D:/Poly_MSc_Code/libraries_and_toolboxes/sepia/wrapper")
+bfr_wrappers = eng.genpath("R:/Poly_MSc_Code/libraries_and_toolboxes/sepia/wrapper")
 eng.addpath(bfr_wrappers, nargout=0)
 
-all_funcs = eng.genpath("D:/Poly_MSc_Code/libraries_and_toolboxes/sepia")
+all_funcs = eng.genpath("R:/Poly_MSc_Code/libraries_and_toolboxes/sepia")
 eng.addpath(all_funcs, nargout=0)
 
-path_to_MEDI_tb = "D:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes/MEDI_toolbox"
+path_to_MEDI_tb = "R:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes/MEDI_toolbox"
 medi_sama = eng.genpath(path_to_MEDI_tb)
 eng.addpath(medi_sama, nargout = 0)
 
@@ -41,7 +41,7 @@ dipole_inv_params = {  # Example method name
 matrixSize = [101,171,141]
 voxelSize = [0.9766, 0.9766, 2.3440]
 counter = 100
-iteration_fn = f"tkd_run_test_manual/"
+iteration_fn = f"tkd_run_test_manual_after_reset/"
 iter_folder = r"E:\msc_data\sc_qsm\Swiss_data\march_25_re_process\MR_simulations\sim_data\QSM_processing\mrsim_outputs\custom_acq_params\dipole_inversion_tests\manual_testing_tkd"
 
 

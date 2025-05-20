@@ -2,8 +2,8 @@
 
 clear
 
-path = 'D:/Poly_MSc_Code/libraries_and_toolboxes/sepia';
-path2 = 'D:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes';
+path = 'R:/Poly_MSc_Code/libraries_and_toolboxes/sepia';
+path2 = 'R:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes';
 
 data_path = '';
 addpath(path);

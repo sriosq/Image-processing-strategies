@@ -22,10 +22,9 @@ def display_qsm_slice(qsm_data, img_class=None, colormap="jet", slice_index=None
     plt.figure(figsize=(6, 6))
     plt.imshow(qsm_slice.T, cmap=colormap, origin="lower", vmin=cmap_min, vmax=cmap_max)  # Transpose to match orientation
     plt.colorbar(label=" $\\chi$ (ppm)")
-    plt.title(f"QSM Slice {slice_index}")
+    plt.title(f"Chimap Slice ~C2")
     plt.axis("off")
 
-    
 
     if img_class == "in_vivo":
         # Select this xlim and ylim
@@ -41,9 +40,9 @@ def display_qsm_slice(qsm_data, img_class=None, colormap="jet", slice_index=None
           plt.xlim(140,180)
           plt.ylim(140,160)
     
-    elif img_class == "weird_TEs":
-            plt.xlim(30, 60)
-            plt.ylim(125, 145)
+    elif img_class == "sim_ideal":
+            plt.xlim(144, 174)
+            plt.ylim(139, 164)
 
     elif img_class == "custom":
             if zoom_region:
@@ -54,7 +53,9 @@ def display_qsm_slice(qsm_data, img_class=None, colormap="jet", slice_index=None
                 raise ValueError("Using 'custom' requires zoom_region to be provided.")
     
     plt.show()
-
+    gm_mean, wm_mean = calculate_masked_mean(qsm_data)
+    print(f"GM Mean: {gm_mean:.4f} ppm")
+    print(f"WM Mean: {wm_mean:.4f} ppm")
 
 def display_local_field(local_field_data, img_class=None, colormap="bwr", slice_index=None, zoom_region=None, cmap_min=None, cmap_max=None):
     """
@@ -108,7 +109,23 @@ def display_local_field(local_field_data, img_class=None, colormap="bwr", slice_
                 raise ValueError("Using 'custom' requires zoom_region to be provided.")
     
     plt.show()
+    gm_mean, wm_mean = calculate_masked_mean(local_field_data)
+    print(f"GM Mean: {gm_mean:.4f} ppm")
+    print(f"WM Mean: {wm_mean:.4f} ppm")
 
+
+def load_gm_wm_masks(gm_mask_path, wm_mask_path):
+    global wm_mask_data, gm_mask_data
+    wm_mask_data = nib.load(wm_mask_path).get_fdata()
+    gm_mask_data = nib.load(gm_mask_path).get_fdata()
+
+def calculate_masked_mean(img_data):
+    """
+    Calculate the mean of the data within the GM and WM region.
+    """
+    tmp_gm_mean = np.mean(img_data[gm_mask_data == 1])
+    tmp_wm_mean = np.mean(img_data[wm_mask_data == 1])
+    return tmp_gm_mean, tmp_wm_mean
 
 
 

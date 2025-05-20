@@ -6,17 +6,17 @@ import nibabel as nib
 
 eng = matlab.engine.start_matlab()
 
-sepia_path = "D:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
-xtra_tb_path = "D:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes"
+sepia_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
+xtra_tb_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes"
 
 eng.addpath(sepia_path)
-bfr_wrappers = eng.genpath("D:/Poly_MSc_Code/libraries_and_toolboxes/sepia/wrapper")
+bfr_wrappers = eng.genpath("R:/Poly_MSc_Code/libraries_and_toolboxes/sepia/wrapper")
 eng.addpath(bfr_wrappers, nargout=0)
 
-all_funcs = eng.genpath("D:/Poly_MSc_Code/libraries_and_toolboxes/sepia")
+all_funcs = eng.genpath("R:/Poly_MSc_Code/libraries_and_toolboxes/sepia")
 eng.addpath(all_funcs, nargout=0)
 
-path_to_MEDI_tb = "D:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes/MEDI_toolbox"
+path_to_MEDI_tb = "R:/Poly_MSc_Code/libraries_and_toolboxes/toolboxes/MEDI_toolbox"
 medi_sama = eng.genpath(path_to_MEDI_tb)
 eng.addpath(medi_sama, nargout = 0)
 

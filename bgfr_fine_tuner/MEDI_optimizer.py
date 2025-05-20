@@ -6,9 +6,9 @@ import nibabel as nib
 import numpy as np
 import sys
 import json
-import time
+import time  
 
-def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, thr):
+def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, lammbda, percentage, radius):
     eng = matlab.engine.start_matlab()
 
     sepia_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
@@ -25,9 +25,8 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, thr):
     medi_sama = eng.genpath(path_to_MEDI_tb)
     eng.addpath(medi_sama, nargout = 0)
 
-    #  TKD parameters
-    
-    threshold = thr
+    #  For NDI: tolerance, max # of iterations and step size
+    zeropad_size = [0,0,0]
 
     dipole_inv_params = {  
     
@@ -38,13 +37,21 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, thr):
     },
     'qsm':{
     'reference_tissue': "Brain mask",
-    "method": "TKD",
-    'threshold':threshold}
+    "method": "MEDI",
+    'lambda': 0,
+    'wData': 1,
+    'percentage': percentage,
+    'zeropad': zeropad_size,
+    'isSMV': 1,
+    'radius': radius,
+    'merit': 1,
+    'isLambdaCSF': 0,
+    'lambdaCSF': 100} # This is a boolean option, test 1 time with 0 then turn on in SEPIA and compare
 
 }
 
-    eng.python_wrapper(in1, in2, in3, in4 , 'TKD', output_basename, mask_filename, dipole_inv_params, nargout = 0)
-    print("Chi map Created! Calculate metrics and update parameters!")
+    eng.python_wrapper(in1, in2, in3, in4 , 'MEDI', output_basename, mask_filename, dipole_inv_params, nargout = 0)
+    print("Chi map! Calculate metrics and update parameters!")
 
 
 def configure_experiment_run(test_fn):
@@ -56,7 +63,7 @@ def configure_experiment_run(test_fn):
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_TKD/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_MEDI/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -65,7 +72,7 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_TKD/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_MEDI/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
 
@@ -83,31 +90,33 @@ def load_groun_truth_chidist_data():
     chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
     print("Ground truth susceptibility map loaded")
 
-def log_best_solution(obj_value, iteration, thr, gm_rmse, wm_rmse):
+def log_best_solution(obj_value, iteration, lmbda, percentage, radius, gm_rmse, wm_rmse):
     global best_obj_value
     total_rmse = gm_rmse + wm_rmse
     if obj_value <= best_obj_value:
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"Iteration: {iteration}: OBJ {obj_value} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                file.write(f"Iteration: {iteration}: OBJ {obj_value} // Lambda: {lmbda}, Percentage: {percentage}, SMV radius: {radius}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Lambda: {lmbda}, Percentage: {percentage}, SMV radius: {radius}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
 
 
-def tkd_optimizer(x):
+def MEDI_optimizer(x):
     global counter
 
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
-
-    thr = x.get_coord(0)
+    # lammbda, percentage, radius
+    lmbda = x.get_coord(0)
+    percentage = x.get_coord(1)
+    smv_radius = x.get_coord(2)
     
-    iteration_fn = f"tkd_run{counter}/"
+    iteration_fn = f"MEDI_run{counter}/"
 
     output_fn = str(os.path.join(iter_folder,iteration_fn+"Sepia"))
 
@@ -120,13 +129,16 @@ def tkd_optimizer(x):
     best_local_fiel_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\bgfr_opt\iter_SHARP\RMSE_test1_mskd_fm_200_evals\sharp_run72/Sepia_localfield.nii.gz")
     custom_header_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal/custom_qsm_sim.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/cord_mask_crop.nii.gz")
+
+    # Some algorithms use the magnitude for weighting! Should be input #2
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\gauss_crop_sim_mag_pro.nii.gz")
     
     in1 = best_local_fiel_path
-    in2 = ""
+    in2 = gauss_sim_ideal_mag_path 
     in3 = ""
     in4 = custom_header_path
 
-    create_chimap(in1, in2, in3, in4, output_fn, mask_filename, thr)
+    create_chimap(in1, in2, in3, in4, output_fn, mask_filename, tol, maxiter, stepSize, isGPU)
     # Import local field for RMSE calculation
     new_chimap_path = os.path.join(iter_folder,iteration_fn + "Sepia_chimap.nii.gz")
     
@@ -173,14 +185,16 @@ def tkd_optimizer(x):
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, thr, gm_rmse, wm_rmse)
+    log_best_solution(objective_value, counter, tol, maxiter, stepSize, gm_rmse, wm_rmse)
 
-    print(f"Iter {counter}: Threshold={thr}, GM+WM RMSE = {objective_value}")
+    print(f"Iter {counter}: Lambda = {lmbda}, Percentage = {percentage}, SMV radius = {radius} GM+WM RMSE = {objective_value}")
 
     # Data to save
     sidecar_data = {
         'iteration': counter,
-        'threshold': float(thr),
+        'Lambda' = float(lmbda),
+        'Percentage': float(percentage),
+        'SMV radius': float(radius),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
@@ -199,33 +213,32 @@ def tkd_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 1",
-    "BB_INPUT_TYPE (R)",
+    "DIMENSION 3",
+    "BB_INPUT_TYPE (R R R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 100",
+    "MAX_BB_EVAL 600",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
 ]
-# For TKD the x0 should be threshold
-# The treshold is used to truncate k-space data looking to avoid singularities from the dipole cone
-# A high value (e.g. 0.5) will lead to more aggressive noise supression but may lose fine details
-# Lower value may retain more details but increase noise
+# For MEDI the only parameters to optimize are the lambda, percentage and radius
+# The lambda is the regularization parameter, percentage is the percentage of the local field to use and radius is the SMV radius
 # Begin:
 start_time = time.time()
-x0 = [0.15] # Recommended by SEPIA (for brain)
+x0 = [1, 90, 5] # Recommended by SEPIA (for brain)
 
-lb = [0.00001]
+lb = [0.000001, 1, 1]
 
-ub = [0.5]
+ub = ['+inf', 99, '+inf']
 
 counter = 0
 
-configure_experiment_run("RMSE_test2_3_evals")
+configure_experiment_run("RMSE_test1_with_mag_600_evals")
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
-result = nomad.optimize(tkd_optimizer, x0, lb, ub, nomad_params)
+result = nomad.optimize(MEDI_optimizer, x0, lb, ub, nomad_params)
+
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]
 output = "\n".join(fmt)

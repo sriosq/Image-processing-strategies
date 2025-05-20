@@ -6,9 +6,9 @@ import nibabel as nib
 import numpy as np
 import sys
 import json
-import time
+import time  
 
-def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, thr):
+def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, tol, maxiter, lambda_reg, opt_flag):
     eng = matlab.engine.start_matlab()
 
     sepia_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
@@ -25,9 +25,9 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, thr):
     medi_sama = eng.genpath(path_to_MEDI_tb)
     eng.addpath(medi_sama, nargout = 0)
 
-    #  TKD parameters
+    #  iLSQR uses tolerance, max # of iterations and regularization parameter
     
-    threshold = thr
+    reg_param = lambda_reg
 
     dipole_inv_params = {  
     
@@ -38,13 +38,16 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, thr):
     },
     'qsm':{
     'reference_tissue': "Brain mask",
-    "method": "TKD",
-    'threshold':threshold}
+    "method": "iLSQR",
+    'tol': tol,
+    'maxiter': maxiter,
+    'lambda': reg_param,
+    'optimise': 0} # This is a boolean option, test 1 time with 0 then turn on in SEPIA and compare
 
 }
 
-    eng.python_wrapper(in1, in2, in3, in4 , 'TKD', output_basename, mask_filename, dipole_inv_params, nargout = 0)
-    print("Chi map Created! Calculate metrics and update parameters!")
+    eng.python_wrapper(in1, in2, in3, in4 , 'iLSQR', output_basename, mask_filename, dipole_inv_params, nargout = 0)
+    print("Chi map! Calculate metrics and update parameters!")
 
 
 def configure_experiment_run(test_fn):
@@ -56,7 +59,7 @@ def configure_experiment_run(test_fn):
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_TKD/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_iLSQR/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -65,7 +68,7 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_TKD/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_iLSQR/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
 
@@ -83,31 +86,33 @@ def load_groun_truth_chidist_data():
     chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
     print("Ground truth susceptibility map loaded")
 
-def log_best_solution(obj_value, iteration, thr, gm_rmse, wm_rmse):
+def log_best_solution(obj_value, iteration, tol, maxiter, lambd_reg, opt_flag, gm_rmse, wm_rmse):
     global best_obj_value
     total_rmse = gm_rmse + wm_rmse
     if obj_value <= best_obj_value:
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"Iteration: {iteration}: OBJ {obj_value} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                file.write(f"Iteration: {iteration}: OBJ {obj_value} // Tolerance: {tol}, Max # iter.: {maxiter} Lambda: {lambd_reg}, Optimise: {opt_flag}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Tolerance: {tol}, Max # iter.: {maxiter}, Lambda: {lambd_reg}, Optimise: {opt_flag} GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
 
 
-def tkd_optimizer(x):
+def iLSQR_optimizer(x):
     global counter
 
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
-
-    thr = x.get_coord(0)
+    tol = x.get_coord(0)
+    maxiter = x.get_coord(1)
+    reg_param = x.get_coord(2)
+    optimise_flag = 0
     
-    iteration_fn = f"tkd_run{counter}/"
+    iteration_fn = f"iLSQR_run{counter}/"
 
     output_fn = str(os.path.join(iter_folder,iteration_fn+"Sepia"))
 
@@ -126,7 +131,7 @@ def tkd_optimizer(x):
     in3 = ""
     in4 = custom_header_path
 
-    create_chimap(in1, in2, in3, in4, output_fn, mask_filename, thr)
+    create_chimap(in1, in2, in3, in4, output_fn, mask_filename, tol, maxiter, reg_param, optimise_flag)
     # Import local field for RMSE calculation
     new_chimap_path = os.path.join(iter_folder,iteration_fn + "Sepia_chimap.nii.gz")
     
@@ -173,14 +178,16 @@ def tkd_optimizer(x):
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, thr, gm_rmse, wm_rmse)
+    log_best_solution(objective_value, counter, tol, maxiter, reg_param, optimise_flag, gm_rmse, wm_rmse)
 
-    print(f"Iter {counter}: Threshold={thr}, GM+WM RMSE = {objective_value}")
+    print(f"Iter {counter}: Tolerance: {tol}, Max # iter.: {maxiter} Lambda = {reg_param}, Self-optimization = {optimise_flag}, GM+WM RMSE = {objective_value}")
 
     # Data to save
     sidecar_data = {
         'iteration': counter,
-        'threshold': float(thr),
+        'tolerance': float(tol),
+        'maxiter': float(maxiter),
+        'Lambda': float(reg_param),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
@@ -199,33 +206,34 @@ def tkd_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 1",
-    "BB_INPUT_TYPE (R)",
+    "DIMENSION 3",
+    "BB_INPUT_TYPE (R I R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 100",
+    "MAX_BB_EVAL 600",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
 ]
-# For TKD the x0 should be threshold
-# The treshold is used to truncate k-space data looking to avoid singularities from the dipole cone
-# A high value (e.g. 0.5) will lead to more aggressive noise supression but may lose fine details
-# Lower value may retain more details but increase noise
+# For iLSQR solution we use lambda as a regularization parameter and a self-optimisation by L-curve approach flag
+# Lambda controls the balance between data fidelity and smoothness of the QSM map. There is an optionn for self-optimisation similar to the one used in closed-form solution
+# The tolerance is for precision of the solution, lower values (e.g., 1e-8) are more accurate but slower.
+# Maximum number of iterations limits LSQR, we can go from 20 to 200 but this may increase the time of computation so its important to optimize!
 # Begin:
 start_time = time.time()
-x0 = [0.15] # Recommended by SEPIA (for brain)
+x0 = [0.001, 100, 0.13] # Recommended by SEPIA (for brain)
 
-lb = [0.00001]
+lb = [0.00000001, 20, 0.00001]
 
-ub = [0.5]
+ub = [0.1, 200, 0.5]
 
 counter = 0
 
-configure_experiment_run("RMSE_test2_3_evals")
+configure_experiment_run("RMSE_test1_600_evals")
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
-result = nomad.optimize(tkd_optimizer, x0, lb, ub, nomad_params)
+result = nomad.optimize(iLSQR_optimizer, x0, lb, ub, nomad_params)
+
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]
 output = "\n".join(fmt)
