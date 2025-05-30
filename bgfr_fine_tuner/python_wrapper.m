@@ -8,7 +8,7 @@
 % only when all the keys are strings! Not supported otherwise
 %
 % Input/Output filenames
-function python_wrapper(in1,in2,in3,in4, bfr_alg, outpath, maskpath, paramStruct)
+function python_wrapper(in1, in2, in3, in4, alg_name, outpath, maskpath, paramStruct)
 sepia_addpath;
 
 disp("Begin from Python");
@@ -21,7 +21,7 @@ input_py(4).name = in4;
 
 disp("Input received");
 % Make sure radius_array is MATLAB-compatible (already double from Python)
-if strcmp(bfr_alg, 'VSHARP')
+if strcmp(alg_name, 'VSHARP')
     if isfield(paramStruct, 'bfr') && isfield(paramStruct.bfr, 'radius')
         radius_array = paramStruct.bfr.radius;
         disp(radius_array)
@@ -30,9 +30,8 @@ if strcmp(bfr_alg, 'VSHARP')
             error('VSHARP selected but no radius field found in paramStruct.bfr');
     end
 else
-    disp(['Using BFR algorithm: ', bfr_alg, ' (no extra handling needed)'])
+    disp(['Using algorithm: ', alg_name, ' (no extra handling needed)'])
 end
-
 
 output_basename = outpath;
 params = paramStruct;
