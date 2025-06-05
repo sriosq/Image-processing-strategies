@@ -47,11 +47,11 @@ B0 = 3;
 B0_dir = [0;0;1];
 CF = 4*42.58*1e6; % In Hz, B0 * gyromagnetic ration
 % Echo time or list of echo times
-delta_TE = 13.14 - 6.86;
 matrixSize = [384, 384, 16]; % The "dimensions" of the image used
 voxelSize = [0.5, 0.5, 5]; % Pixdim 
 
-save("swiss_invivo_QSM.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+save("correct_swiss_qsm_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+>>>>>>> b65df692141ffcee5ffbf0861d6d158704a671b3
 
 %% Custom TEs with Swiss acq FOV
 TE = [1, 2, 3, 4, 5, 10, 15, 20, 30, 40] ;
