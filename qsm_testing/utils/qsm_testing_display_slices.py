@@ -81,12 +81,11 @@ def display_local_field(local_field_data, img_class=None, colormap="bwr", slice_
     plt.axis("off")
 
     
-    if img_class == "in_vivo":
+    if img_class == "swiss_in_vivo":
         # Select this xlim and ylim
-        if slice_index > 30 or slice_index < 40:
-            plt.title(f"Local Field ~C2")
-            plt.xlim(144, 174)
-            plt.ylim(139, 164)
+        plt.xlim(174, 210)
+        plt.ylim(174, 210)
+        plt.show()
 
     elif img_class == "sim_ideal":
            # Select this xlim and ylim
@@ -94,10 +93,12 @@ def display_local_field(local_field_data, img_class=None, colormap="bwr", slice_
             plt.title(f"Local Field ~C2")
             plt.xlim(144, 174)
             plt.ylim(139, 164)
+            plt.show()
 
     elif img_class == "swiss_sim":
           plt.xlim(140,180)
           plt.ylim(140,160)
+          plt.show()
     
 
     elif img_class == "custom":
@@ -105,10 +106,11 @@ def display_local_field(local_field_data, img_class=None, colormap="bwr", slice_
                 x_min, x_max, y_min, y_max = zoom_region        
                 plt.xlim(x_min, x_max)
                 plt.ylim(y_min, y_max)
+                plt.show()
             else:
                 raise ValueError("Using 'custom' requires zoom_region to be provided.")
     
-    plt.show()
+    
     gm_mean, wm_mean = calculate_masked_mean(local_field_data)
     print(f"GM Mean: {gm_mean:.4f} ppm")
     print(f"WM Mean: {wm_mean:.4f} ppm")

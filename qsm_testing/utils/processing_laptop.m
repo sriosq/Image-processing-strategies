@@ -1,12 +1,13 @@
 clear
 % Running this before starting sepia processing
-path_sepia = "/home/soothsayer7/sepia";
+path_sepia = "/Users/soothsayer7/msc_rios/libraries_and_toolboxes/sepia";
 
-path_tb = "/home/soothsayer7/mat_toolboxes";
+path_tb = "/Users/soothsayer7/msc_rios.libraries_and_toolboxes/toolboxes";
 
-addpath(path_sepia);
+addpath(genpath(path_sepia));
 addpath(genpath(path_tb));
 
-sepia
+sepia;
 %% 
+% Edit the sepia header
 
