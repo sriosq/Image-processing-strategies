@@ -47,10 +47,10 @@ B0 = 3;
 B0_dir = [0;0;1];
 CF = 127740000;
 % Echo time or list of echo times
-matrixSize = [301, 351, 128]; % The "dimensions" of the image used
-voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim 
+matrixSize = [384, 384, 16]; % The "dimensions" of the image used
+voxelSize = [0.5, 0.5, 5]; % Pixdim 
 
-save("swiss_qsm_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+save("correct_swiss_qsm_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
 %% Custom TEs with Swiss acq FOV
 TE = [1, 2, 3, 4, 5, 10, 15, 20, 30, 40] ;
