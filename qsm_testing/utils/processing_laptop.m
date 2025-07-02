@@ -8,6 +8,3 @@ addpath(genpath(path_sepia));
 addpath(genpath(path_tb));
 
 sepia;
-%% 
-% Edit the sepia header
-

@@ -65,4 +65,16 @@ voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim
 save("custom_qsm_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
 
+%% Sepia Header for sct_100 in vivo QSM - test#1
+
+TE = [2.63, 7.63, 12.63, 17.63, 22.63];
+B0 = 3;
+B0_dir = [0;0;1];
+CF = 123.249136;
+matrixSize = [304, 304, 20];
+voxelSize = [0.523, 0.523, 5];
+
+save("sct_100_qsm.mat", 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
+
+
 
