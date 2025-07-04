@@ -4,3 +4,9 @@
 [submodule "MRsim/tissue-to-MRproperty"]
 	path = MRsim/tissue-to-MRproperty
 	url = https://github.com/shimming-toolbox/tissue-to-MRproperty.git
+[submodule "chi_opt/susceptibility-to-fieldmap-fft"]
+	path = chi_opt/susceptibility-to-fieldmap-fft
+	url = https://github.com/shimming-toolbox/susceptibility-to-fieldmap-fft
+[submodule "chi_opt/tissue-to-MRproperty"]
+	path = chi_opt/tissue-to-MRproperty
+	url = https://github.com/shimming-toolbox/tissue-to-MRproperty

@@ -1,0 +1,11 @@
+click
+pandas
+numpy
+matplotlib
+ipykernel
+ipython
+treelib
+pytest
+jupyterlab
+scipy
+python=3.10.11
