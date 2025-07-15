@@ -2,7 +2,7 @@ import nibabel as nib
 import numpy as np
 import matplotlib.pyplot as plt
 
-def display_qsm_slice(qsm_data, img_class=None, colormap="jet", slice_index=None, zoom_region=None, cmap_min=None, cmap_max=None):
+def display_qsm_slice(qsm_data, img_class=None, colormap="bwr", slice_index=None, zoom_region=None, cmap_min=None, cmap_max=None):
     """
     Displays an axial slice of a QSM NIfTI image with a colorbar.
 

@@ -20,7 +20,7 @@ phase = niftiread("no_gauss_sim_phase.nii.gz");
 %%
 % Traverse to code and load header_mrsim.mat
 l_header = load("header_mrsim.mat");
-header = l_header.header
+header = l_header.header;
 % Create a basic NIfTI header using niftiinfo (if you have the file)
 info = phase;
 

@@ -51,7 +51,6 @@ matrixSize = [384, 384, 16]; % The "dimensions" of the image used
 voxelSize = [0.5, 0.5, 5]; % Pixdim 
 
 save("correct_swiss_qsm_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
->>>>>>> b65df692141ffcee5ffbf0861d6d158704a671b3
 
 %% Custom TEs with Swiss acq FOV
 TE = [1, 2, 3, 4, 5, 10, 15, 20, 30, 40] ;
@@ -76,5 +75,17 @@ voxelSize = [0.523, 0.523, 5];
 
 save("sct_100_qsm.mat", 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
 
+%% Sepia Header for Swiss data mk2.
+% We have 4 subjects, and each has 5 echoes
+% For HC1, HC2 :
+% RepetitionTime": 0.038,
+% FlipAngle": 8
 
+TE = [6.85, 10.85, 14.85, 18.85, 22.85];
+B0 = 3;
+B0_dir = [0;0;1];
+CF = 123.249;
+matrixSize = [384, 384, 16];
+voxelSize = [0.5833, 0.5833, 5];
 
+save("swiss_header_mk2.mat", 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
