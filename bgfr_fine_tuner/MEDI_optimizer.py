@@ -8,7 +8,7 @@ import sys
 import json
 import time  
 
-def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, lmbda, percentage, radius=6):
+def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, lmbda, percentage, radius=3):
     eng = matlab.engine.start_matlab()
 
     sepia_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
@@ -45,11 +45,11 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, lmbda, pe
     'wData': 1,
     'percentage': percentage,
     'zeropad': zeropad_size,
-    'isSMV': 0,
+    'isSMV': 1,
     'radius': radius,
     'merit': 0,
     'isLambdaCSF': 0,
-    'lambdaCSF': 100} # This is a boolean option, test 1 time with 0 then turn on in SEPIA and compare
+    'lambdaCSF': 100} # This is a boolean option but only usable with brain FOV
 
 }
 
@@ -66,7 +66,9 @@ def configure_experiment_run(test_fn):
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_MEDI/VNS_on_smv_merit_off/{test_fn}"
+    # For each new run, the iter folder and the txt_file_path must be pointing to the same folder,
+    # Because we check if its created and not empty, if it is not, we create it.
+    iter_folder = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_MEDI/VNS_on_smv_on_merit_off/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -75,7 +77,7 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_MEDI/VNS_on_smv_merit_off/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_MEDI/VNS_on_smv_on_merit_off/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
 
@@ -131,7 +133,8 @@ def MEDI_SMV_OFF_optimizer(x):
     print("Output FN used:", output_fn)
     # Best local field is using SHARP!
     best_local_fiel_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\bgfr_opt\iter_SHARP\RMSE_test1_mskd_fm_200_evals\sharp_run72/Sepia_localfield.nii.gz")
-    custom_header_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal/custom_qsm_sim.mat")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\manual_configs\testing_padsize_MEDI\custom_qsm_sim_for_medi_CF_Hz.mat")
+    # For medi, LF is converted from Hz to radians so we need the echo times to be in seconds and the CF to be in Hz (could be MHz but we need to discuss with dev team)
     mask_filename = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/cord_mask_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
@@ -191,7 +194,7 @@ def MEDI_SMV_OFF_optimizer(x):
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, lmbda, percentage, gm_rmse, wm_rmse)
+    log_best_solution(objective_value, counter, lmbda, percentage, gm_rmse, wm_rmse, radius = 3)
 
     print(f"Iter {counter}: Lambda = {lmbda}, Percentage = {percentage}, GM+WM RMSE = {objective_value}")
 
@@ -200,6 +203,7 @@ def MEDI_SMV_OFF_optimizer(x):
         'iteration': counter,
         'Lambda': float(lmbda),
         'Percentage': float(percentage),
+        'SMV radius': str(3),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
@@ -327,7 +331,7 @@ nomad_params = [
     "DIMENSION 2", 
     "BB_INPUT_TYPE (R R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 200",
+    "MAX_BB_EVAL 1000",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -343,19 +347,21 @@ nomad_params = [
 # When disabling SMV, the radius is not used and we can find the optimized parameters for the other two
 # Begin:
 start_time = time.time()
-x0 = [1780, 2] # Recommended by SEPIA (for brain)
+x0 = [1780, 2] # Recommended by SEPIA is 1000 and 90, but based on understanding of our FOV and the algorithm, we should try lower percentage, lambda is to be tested
 
-lb = [0.1, 1]
+lb = [0.01, 1]
 
-ub = [5000, 30]
+ub = [5000, 90]
 
 counter = 0
 
-configure_experiment_run("RMSE_test2_with_mag_500_evals")
+configure_experiment_run("RMSE_test5_more_percentage_with_mag_1000_evals")
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
 result = nomad.optimize(MEDI_SMV_OFF_optimizer, x0, lb, ub, nomad_params)
+# We use SMV_OFF optimizer because the radius must be fixed based on the acquisition parameters and the FOV, so we do not optimize it
+# For the simulations, SMV radius is set to 3, we'll fix it to that and just test lambda and percentage
 
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]
