@@ -50,10 +50,20 @@ CF = 4*42.58*1e6; % In Hz, B0 * gyromagnetic ration
 matrixSize = [384, 384, 16]; % The "dimensions" of the image used
 voxelSize = [0.5, 0.5, 5]; % Pixdim 
 
-save("correct_swiss_qsm_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
->>>>>>> b65df692141ffcee5ffbf0861d6d158704a671b3
+save("correct_swiss_qsm_invivo.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
-%% Custom TEs with Swiss acq FOV
+%% Custom TEs with Swiss acq FOV - te's of first Swiss data
+TE = [0.00686, 0.01314, 0.01942, 0.0257, 0.03198] ;
+B0 = 3;
+B0_dir = [0;0;1];
+CF = 127740000;
+% Echo time or list of echo times
+matrixSize = [301, 351, 128]; % The "dimensions" of the image used
+voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim 
+
+save("swiss_qsm1_te_seconds_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+
+%% Swiss TEs with Swiss acq FOV- SIMULATION
 TE = [1, 2, 3, 4, 5, 10, 15, 20, 30, 40] ;
 B0 = 3;
 B0_dir = [0;0;1];
@@ -64,6 +74,18 @@ voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim
 
 save("custom_qsm_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
+
+
+%% Custom TEs with Swiss acq FOV TEs in seconds only to test in MEDI?
+TE = [0.001, 0.002, 0.003, 0.004, 0.005, 0.010, 0.015, 0.020, 0.030, 0.040] ; % In seconds
+B0 = 3; % In Tesla
+B0_dir = [0;0;1];
+CF = 127740000; % In Hz
+% Echo time or list of echo times
+matrixSize = [301, 351, 128]; % The "dimensions" of the image used
+voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim 
+
+save("custom_qsm_sim_for_medi_CF_Hz.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
 %% Sepia Header for sct_100 in vivo QSM - test#1
 
@@ -76,5 +98,29 @@ voxelSize = [0.523, 0.523, 5];
 
 save("sct_100_qsm.mat", 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
 
+%% Sepia Header for Swiss data mk2.
+% We have 4 subjects, and each has 5 echoes
+% For HC1, HC2 :
+% RepetitionTime": 0.038,
+% FlipAngle": 8
 
+TE = [6.85, 10.85, 14.85, 18.85, 22.85];
+B0 = 3;
+B0_dir = [0;0;1];
+CF = 123.249;
+matrixSize = [384, 384, 16];
+voxelSize = [0.5833, 0.5833, 5];
 
+save("swiss_header_mk2.mat", 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
+
+%%
+% Values for GRE acq for chi-fitting project db0-032, db0-033 and db0-035
+B0 = 3; % Magnetic Field Strength in Tesla
+B0_dir = [0; 0; 1]; % Direction of B0
+CF = 127740000; % Central Frequency
+TE = [3.27, 5.2, 7.13]; % In seconds 
+% Echo time or list of echo times
+matrixSize = [144, 144, 20]; % The "dimensions" of the image used
+voxelSize = [1.9792, 1.9792, 2, 3]; % Pixdim 
+
+save("db032_header.mat", 'B0', 'CF', 'B0_dir', "TE", "matrixSize", "voxelSize");
