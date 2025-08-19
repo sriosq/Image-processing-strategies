@@ -55,15 +55,15 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol,
 
 def configure_experiment_run(test_fn):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
-    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/gm_mask_crop.nii.gz")
+    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
 
-    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/wm_mask_crop.nii.gz")
+    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/masks/sc_wm_crop.nii.gz")
     wm_mask_data = wm_mask_img.get_fdata()
     
     print("GM and WM masks loaded successfully.")
 
-    iter_folder = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\bgfr_opt\iter_LBV/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params/bgfr_opt\iter_LBV/{test_fn}"
     
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -73,7 +73,7 @@ def configure_experiment_run(test_fn):
         print("Experiment folder created!")
     
     # Create restuls test txt:
-    txt_file_path = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\bgfr_opt\iter_LBV/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params/bgfr_opt\iter_LBV/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
 
@@ -82,7 +82,7 @@ def configure_experiment_run(test_fn):
 
 def load_groun_truth_data():
     global wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data
-    wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\gt_ref_avg_sc\gt_gauss_lf_Hz_swiss_crop.nii.gz").get_fdata()
+    wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz").get_fdata()
     # This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
 
@@ -99,7 +99,7 @@ def log_best_solution(obj_value, iteration, tolerance, depth, peel, gm_rmse, wm_
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Max radii: {max_radii}, Min radii: {min_radii}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Tolerance: {tolerance}, Depth: {depth}, Peel: {peel}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
 
 def lbv_optimizer(x):
     global counter
@@ -122,10 +122,10 @@ def lbv_optimizer(x):
     print("Output FN used:", output_fn)
 
     #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test2_msk_apply/B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/custom_params\fm_tests\test1_simple\B0.nii")
     # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
-    custom_header_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal/custom_qsm_sim.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/cord_mask_crop.nii.gz")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
     
     in1 = custom_fm_path
     in2 = ""
@@ -210,11 +210,14 @@ nomad_params = [
     "DIMENSION 3",
     "BB_INPUT_TYPE (R I I)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 200",
+    "MAX_BB_EVAL 600",
     "DISPLAY_DEGREE 2",
     #"STATS_FILE nomad_stats_test4.txt $ BBE $ ( SOL )  & $ %.5EOBJ $ ( TIME )",
     "DISPLAY_ALL_EVAL false",
-    "DISPLAY_STATS BBE OBJ"
+    "DISPLAY_STATS BBE OBJ",
+    "VNS_MADS_SEARCH true", # Optional Variable Neighborhood Search
+    "VNS_MADS_SEARCH_TRIGGER 0.75" # Max desired ration of VNS BBevals over the total number of BBevals
+
 ]
 
 # For LBV the x0 should be [tolerance, depth, peel]
@@ -227,15 +230,15 @@ nomad_params = [
 # Peel refers to how many boundary layers are peeled off, chose low upper bound because SC is small (hypothesis), lowest possible value is 0
 # Begin:
 start_time = time.time()
-x0 = [0.001, 0, 2] # Recommended by SEPIA (for brain): 0.001, 5, 2
+x0 = [0.0001, 5, 2] # Recommended by SEPIA (for brain): 0.001, 5, 2
 
-lb = [0.000001, 0, 1]
+lb = [0.0000001, 0, 1]
 
 ub=[0.1, 8, 5]
 
 counter = 0
 
-configure_experiment_run("RMSE_test4_mskd_fm_integer_vars_200_evals")
+configure_experiment_run("RMSE_test1_VNS_ON")
 best_obj_value = float('inf')
 load_groun_truth_data()
 

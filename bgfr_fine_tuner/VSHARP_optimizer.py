@@ -54,15 +54,15 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, max_
 
 def configure_experiment_run(test_fn):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
-    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/gm_mask_crop.nii.gz")
+    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
 
-    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/wm_mask_crop.nii.gz")
+    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/masks/sc_wm_crop.nii.gz")
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
 
-    iter_folder = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\bgfr_opt\iter_VSHARP/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params/bgfr_opt\iter_VSHARP/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -71,7 +71,7 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\bgfr_opt\iter_VSHARP/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params/bgfr_opt\iter_VSHARP/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
         
@@ -80,9 +80,8 @@ def configure_experiment_run(test_fn):
     
 
 def load_groun_truth_data():
-    global wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data
-    wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\gt_ref_avg_sc\gt_gauss_lf_Hz_swiss_crop.nii.gz").get_fdata()
-    # This loads the Ground truth image with the Swiss Acq. Parameters FOV
+    global crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data
+    crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
 
 def log_best_solution(obj_value, iteration, max_radii, min_radii, gm_rmse, wm_rmse):
@@ -92,7 +91,7 @@ def log_best_solution(obj_value, iteration, max_radii, min_radii, gm_rmse, wm_rm
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Max radii: {max_radii}, Min radii: {min_radii}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                file.write(f"Iteration: {iteration}: OBJ {obj_value} // Max radii: {max_radii}, Min radii: {min_radii}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
 
         best_obj_value = obj_value
         
@@ -121,10 +120,11 @@ def vsharp_optimizer(x):
     print("Output FN used:", output_fn)
 
     #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test2_msk_apply/B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/custom_params\fm_tests\test1_simple\B0.nii")
     # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
-    custom_header_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal/custom_qsm_sim.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/cord_mask_crop.nii.gz")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+
     
     in1 = custom_fm_path
     in2 = ""
@@ -141,7 +141,7 @@ def vsharp_optimizer(x):
     local_field_data = local_field_img.get_fdata()
 
     # Now, we compute the difference between current local field with the Ground Truth
-    pixel_wise_difference = wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data - local_field_data
+    pixel_wise_difference = crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data - local_field_data
     gm_diff = pixel_wise_difference[gm_mask_data==1]
     wm_diff = pixel_wise_difference[wm_mask_data==1]
 
@@ -209,11 +209,13 @@ nomad_params = [
     "DIMENSION 2",
     "BB_INPUT_TYPE (I I)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 100",
+    "MAX_BB_EVAL 200",
     "DISPLAY_DEGREE 2",
     #"STATS_FILE nomad_stats_test2_vsharp.txt $ BBE $ ( SOL )  & $ %.5EOBJ $ ( TIME )",
     "DISPLAY_ALL_EVAL false",
-    "DISPLAY_STATS BBE OBJ"
+    "DISPLAY_STATS BBE OBJ",
+    "VNS_MADS_SEARCH true", # Optional Variable Neighborhood Search
+    "VNS_MADS_SEARCH_TRIGGER 0.75" # Max desired ration of VNS BBevals over the total number of BBevals
 ]
 # For VSHARP the x0 should be [max_radii, min_radii]
 # With our image, the largest axis is 343 mm and the smallest is 300 mm
@@ -230,7 +232,7 @@ ub=[150, 149]
 
 counter = 0
 
-configure_experiment_run("RMSE_test1_masked_fm_100_evals")
+configure_experiment_run("RMSE_test1_200")
 best_obj_value = float('inf')
 load_groun_truth_data()
 

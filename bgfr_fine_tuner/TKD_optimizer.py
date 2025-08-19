@@ -49,14 +49,14 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, thr):
 
 def configure_experiment_run(test_fn):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
-    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/gm_mask_crop.nii.gz")
+    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
 
-    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/wm_mask_crop.nii.gz")
+    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/masks/sc_wm_crop.nii.gz")
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_TKD/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params\sus_mapping_opt\iter_TKD/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -65,22 +65,26 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\dipole_inversion_tests\iter_TKD/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params\sus_mapping_opt\iter_TKD/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
 
 def load_groun_truth_chidist_data():
     global chimap_ref_sc_avg_
     # Lets first load the susceptibility ground truth map:
-    ground_truth_abs_chimap_data = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\sim_inputs\chi_to_fm_ppm/gauss_chi_sc_phantom_swiss_crop.nii.gz").get_fdata()
+    #ground_truth_abs_chimap_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\ground_truth_data\bgfr_gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
     # Now we need to use the average of the spinal cord mask because this is what SEPIA averages to with the mask
-    sc_mask_data = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/cord_mask_crop.nii.gz").get_fdata()
+    #sc_mask_data = nib.load(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/cord_mask_crop.nii.gz").get_fdata()
 
-    avg_chi_sc_val = np.mean(ground_truth_abs_chimap_data[sc_mask_data==1])
-    print("Average chi value in spinal cord with std: ", avg_chi_sc_val)
+    #avg_chi_sc_val = np.mean(ground_truth_abs_chimap_data[sc_mask_data==1])
+    #print("Average chi value in spinal cord with std: ", avg_chi_sc_val)
 
     # Now apply the offset to the ground truth map
-    chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
+    #chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
+    # Or load the already referenced map
+
+    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\ground_truth_data\gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
+
     print("Ground truth susceptibility map loaded")
 
 def log_best_solution(obj_value, iteration, thr, gm_rmse, wm_rmse):
@@ -116,14 +120,21 @@ def tkd_optimizer(x):
         print("Created folder for new iteration #",counter)
     
     print("Output FN used:", output_fn)
-    # Best local field is using SHARP!
-    best_local_fiel_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\bgfr_opt\iter_SHARP\RMSE_test1_mskd_fm_200_evals\sharp_run72/Sepia_localfield.nii.gz")
-    custom_header_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal/custom_qsm_sim.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus/cord_mask_crop.nii.gz")
     
-    in1 = best_local_fiel_path
-    in2 = ""
-    in3 = ""
+    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz") 
+    # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
+    # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+
+    # Some algorithms use the magnitude for weighting! Should be input #2
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
+    # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
+    sepia_weights_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+    
+    in1 = best_local_field_path
+    in2 = gauss_sim_ideal_mag_path 
+    in3 = sepia_weights_path
     in4 = custom_header_path
 
     create_chimap(in1, in2, in3, in4, output_fn, mask_filename, thr)
@@ -202,10 +213,12 @@ nomad_params = [
     "DIMENSION 1",
     "BB_INPUT_TYPE (R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 100",
+    "MAX_BB_EVAL 400",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
-    "DISPLAY_STATS BBE OBJ"
+    "DISPLAY_STATS BBE OBJ",
+    "VNS_MADS_SEARCH true", # Optional Variable Neighborhood Search
+    "VNS_MADS_SEARCH_TRIGGER 0.75" # Max desired ration of VNS BBevals over the total number of BBevals
 ]
 # For TKD the x0 should be threshold
 # The treshold is used to truncate k-space data looking to avoid singularities from the dipole cone
@@ -221,7 +234,7 @@ ub = [0.5]
 
 counter = 0
 
-configure_experiment_run("RMSE_test2_3_evals")
+configure_experiment_run("RMSE_in_gt_lf_tst1")
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
