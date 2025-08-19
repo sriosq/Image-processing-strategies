@@ -52,14 +52,14 @@ voxelSize = [0.5, 0.5, 5]; % Pixdim
 
 save("correct_swiss_qsm_invivo.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
-%% Custom TEs with Swiss acq FOV - te's of first Swiss data
+%% Custom TEs with Swiss acq FOV - te's of first Swiss data for siumulation
 TE = [0.00686, 0.01314, 0.01942, 0.0257, 0.03198] ;
 B0 = 3;
 B0_dir = [0;0;1];
 CF = 127740000;
 % Echo time or list of echo times
 matrixSize = [301, 351, 128]; % The "dimensions" of the image used
-voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim 
+voxelSize = [0.9766, 0.9766, 2.344]; % Pixdim 
 
 save("swiss_qsm1_te_seconds_sim.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
@@ -104,14 +104,14 @@ save("sct_100_qsm.mat", 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
 % RepetitionTime": 0.038,
 % FlipAngle": 8
 
-TE = [6.85, 10.85, 14.85, 18.85, 22.85];
+TE = [0.00685, 0.01085, 0.01485, 0.01885, 0.02285];
 B0 = 3;
 B0_dir = [0;0;1];
 CF = 123.249;
 matrixSize = [384, 384, 16];
 voxelSize = [0.5833, 0.5833, 5];
 
-save("swiss_header_mk2.mat", 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
+save("swiss_header_mk2_te_sec.mat", 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
 
 %%
 % Values for GRE acq for chi-fitting project db0-032, db0-033 and db0-035
@@ -124,3 +124,36 @@ matrixSize = [144, 144, 20]; % The "dimensions" of the image used
 voxelSize = [1.9792, 1.9792, 2, 3]; % Pixdim 
 
 save("db032_header.mat", 'B0', 'CF', 'B0_dir', "TE", "matrixSize", "voxelSize");
+
+%% Swiss invivo Acquisition for Simulation Phantom mk2 (final version)
+% Now that we know that Sepia expects echo times in seconds
+TE = [0.00685, 0.01085, 0.01485, 0.01885, 0.02285];
+B0 = 3;
+B0_dir = [0;0;1];
+CF = B0*42.58*1e6; % In Hz, B0 * gyromagnetic ratio
+matrixSize = [301, 351, 128]; % The "dimensions" of the image used
+voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim 
+
+save("qsm_sc_phantom_swiss_params.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+
+%% Ideal invivo Acquisition for Simulation Phantom mk2 (final version)
+% Now that we know that Sepia expects echo times in seconds
+TE = [0.001, 0.002, 0.003, 0.004, 0.005, 0.01, 0.015, 0.02, 0.03, 0.04];
+B0 = 3;
+B0_dir = [0;0;1];
+CF = 127740000; % In Hz, B0 * gyromagnetic ratio
+matrixSize = [301, 351, 128]; % The "dimensions" of the image used
+voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim 
+
+save("qsm_sc_phantom_custom_params.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+
+%% Testing headers
+% Now that we know that Sepia expects echo times in seconds
+TE = [6.85, 10.85, 14.85, 18.85, 22.85];
+B0 = 3;
+B0_dir = [0;0;1];
+CF = 127740000; % In Hz, B0 * gyromagnetic ratio
+matrixSize = [301, 351, 128]; % The "dimensions" of the image used
+voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim 
+
+save("testing_headers2.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");

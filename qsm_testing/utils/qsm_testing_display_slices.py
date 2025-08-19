@@ -112,8 +112,8 @@ def display_local_field(local_field_data, img_class=None, colormap="bwr", slice_
     
     
     gm_mean, wm_mean = calculate_masked_mean(local_field_data)
-    print(f"GM Mean: {gm_mean:.4f} ppm")
-    print(f"WM Mean: {wm_mean:.4f} ppm")
+    print(f"GM Mean: {gm_mean:.4f} Hz")
+    print(f"WM Mean: {wm_mean:.4f} Hz")
 
 
 def load_gm_wm_masks(gm_mask_path, wm_mask_path):
