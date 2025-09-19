@@ -1,0 +1,8 @@
+name: white_rabbit
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - customtkinter
+      - pyinstaller
+      - pillow
