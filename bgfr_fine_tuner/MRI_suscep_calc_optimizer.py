@@ -54,15 +54,15 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, solver, t
 
 def configure_experiment_run(test_fn):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
-    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks/sc_gm_crop.nii.gz")
+    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
 
-    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/masks/sc_wm_crop.nii.gz")
+    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_wm_crop.nii.gz")
     wm_mask_data = wm_mask_img.get_fdata()
     print("GM and WM masks loaded successfully.")
     # For each new run, the iter folder and the txt_file_path must be pointing to the same folder,
     # Because we check if its created and not empty, if it is not, we create it.
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params\sus_mapping_opt\iter_MRI_suscep_calc/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\sus_mapping_opt\iter_MRI_suscep_calc/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -71,7 +71,7 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params\sus_mapping_opt/iter_MRI_suscep_calc/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\sus_mapping_opt/iter_MRI_suscep_calc/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
 
@@ -89,14 +89,15 @@ def load_groun_truth_chidist_data():
     #chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
     # Or load the already referenced map
 
-    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\ground_truth_data\gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
+    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
 
     print("Ground truth susceptibility map loaded")
 
-def log_best_solution(obj_value, iteration, solver, gm_rmse, wm_rmse, threshold = 0.66667, lmbda =0.05, cg_tol =0.03):
+def log_best_solution(obj_value, iteration, solver, gm_rmse, wm_rmse, threshold, lmbda, cg_tol):
     global best_obj_value
 
     total_rmse = gm_rmse + wm_rmse
+
     if obj_value <= best_obj_value:
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
@@ -104,7 +105,7 @@ def log_best_solution(obj_value, iteration, solver, gm_rmse, wm_rmse, threshold 
                 if solver == 'Truncated kspace division':
                     file.write(f"Iteration: {iteration}: OBJ {obj_value} // Solver: {solver}, Threshold: {threshold}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
                 elif solver == 'Direct Tikhonov':
-                    file.write(f"Iteration: {iteration}: OBJ {obj_value} // Solver: {solver}, Lambda: {threshold}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                    file.write(f"Iteration: {iteration}: OBJ {obj_value} // Solver: {solver}, Lambda: {lmbda}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
                 elif solver == 'Iterative Tikhonov':
                     file.write(f"Iteration: {iteration}: OBJ {obj_value} // Solver: {solver}, Lambda: {lmbda}, CG Tolerance: {cg_tol}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n") 
         else:
@@ -115,7 +116,7 @@ def log_best_solution(obj_value, iteration, solver, gm_rmse, wm_rmse, threshold 
                 if solver == 'Truncated kspace division':
                     file.write(f"Iteration: {iteration}: OBJ {obj_value} // Solver: {solver}, Threshold: {threshold}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
                 elif solver == 'Direct Tikhonov':
-                    file.write(f"Iteration: {iteration}: OBJ {obj_value} // Solver: {solver}, Lambda: {threshold}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                    file.write(f"Iteration: {iteration}: OBJ {obj_value} // Solver: {solver}, Lambda: {lmbda}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
                 elif solver == 'Iterative Tikhonov':
                     file.write(f"Iteration: {iteration}: OBJ {obj_value} // Solver: {solver}, Lambda: {lmbda}, CG Tolerance: {cg_tol}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n") 
 
@@ -138,16 +139,16 @@ def mri_suscep_calc_optimizer_kspace_optimizer(x):
     
     print("Output FN used:", output_fn)
 
-    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz")
+    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz")
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
-    sepia_weights_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+    sepia_weights_path = mask_filename
     
     in1 = best_local_field_path
     in2 = gauss_sim_ideal_mag_path 
@@ -199,7 +200,7 @@ def mri_suscep_calc_optimizer_kspace_optimizer(x):
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, solver, gm_rmse, wm_rmse, threshold = 0.66667, lmbda =0.05, cg_tol = 0.03)
+    log_best_solution(objective_value, counter, solver, gm_rmse, wm_rmse, threshold, lmbda =0.05, cg_tol = 0.03)
 
     print(f"Iter {counter}: Solver = {solver}, Threshold = {threshold}, GM+WM RMSE = {objective_value}")
 
@@ -245,16 +246,16 @@ def mri_suscep_calc_optimizer_direct_Tik_optimizer(x):
     
     print("Output FN used:", output_fn)
 
-    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz")
+    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz")
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
-    sepia_weights_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+    sepia_weights_path = mask_filename
     
     in1 = best_local_field_path
     in2 = gauss_sim_ideal_mag_path 
@@ -306,7 +307,7 @@ def mri_suscep_calc_optimizer_direct_Tik_optimizer(x):
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, solver, gm_rmse, wm_rmse, lmbda)
+    log_best_solution(objective_value, counter, solver, gm_rmse, wm_rmse, threshold="Not used", lmbda = lmbda, cg_tol="Not used")
 
     print(f"Iter {counter}: Solver = {solver}, Lambda = {lmbda}, GM+WM RMSE = {objective_value}")
 
@@ -342,7 +343,7 @@ def mri_suscep_calc_optimizer_iter_Tik_optimizer(x):
     # lammbda, percentage, radius
     lmbda = x.get_coord(0)
     cg_tol = x.get_coord(1)
-    solver = 'Direct Tikhonov'
+    solver = 'Iterative Tikhonov'
     
     iteration_fn = f"mri_suscep_calc_run{counter}/"
 
@@ -352,18 +353,18 @@ def mri_suscep_calc_optimizer_iter_Tik_optimizer(x):
         os.makedirs(output_fn)
         print("Created folder for new iteration #",counter)
     
-    print("Output FN used:", output_fn)
+    print("Output Chi map used:", output_fn)
 
-    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz")
+    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz")
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
-    sepia_weights_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+    sepia_weights_path = mask_filename
     
     in1 = best_local_field_path
     in2 = gauss_sim_ideal_mag_path 
@@ -415,15 +416,16 @@ def mri_suscep_calc_optimizer_iter_Tik_optimizer(x):
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, solver, lmbda, gm_rmse, wm_rmse)
+    log_best_solution(objective_value, counter, solver, gm_rmse, wm_rmse, threshold="Not used", lmbda = lmbda, cg_tol = cg_tol)
 
-    print(f"Iter {counter}: Solver = {solver}, Lambda = {lmbda}, GM+WM RMSE = {objective_value}")
+    print(f"Iter {counter}: Solver = {solver}, Lambda = {lmbda}, CG tolerance = {cg_tol}, GM+WM RMSE = {objective_value}")
 
     # Data to save
     sidecar_data = {
         'iteration': counter,
         'Solver': solver,
         'Lambda': float(lmbda),
+        'CG_Tolerance': float(cg_tol),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
@@ -444,38 +446,38 @@ def mri_suscep_calc_optimizer_iter_Tik_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 1", 
-    "BB_INPUT_TYPE (R)",
+    "DIMENSION 2", 
+    "BB_INPUT_TYPE (R R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 300",
+    "MAX_BB_EVAL 400",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
     "VNS_MADS_SEARCH true", # Optional Variable Neighborhood Search
     "VNS_MADS_SEARCH_TRIGGER 0.75" # Max desired ration of VNS BBevals over the total number of BBevals
 ]
-# For MEDI the only parameters to optimize are the lambda, percentage and radius
-# The lambda is the regularization parameter, percentage is the percentage of the local field to use and radius is the SMV radius
-# The radius is to get rid of any leftover background field in the local field, we can try with the same range as the SHARP
-# Lambda seems different for this algorithm as the default value is 1000, therefore we will try to use from 1e-6 to +inf
-# The percentage is the percentage of the local field to use, we can exitry from 1 to 99
+# For
 
-# When disabling SMV, the radius is not used and we can find the optimized parameters for the other two
 # Begin:
 start_time = time.time()
-x0 = [0.03103] # Recommended by SEPIA is 1000 and 90, but based on understanding of our FOV and the algorithm, we should try lower percentage, lambda is to be tested
 
-lb = [0.00001]
+x0_kspace = [0.66667]
+x0_direct_Tik = [0.05]
+x0_iter_Tik = [0.00001, 0.03]
 
-ub = [1000]
+lb_single = [0.00001]
+ub_single = [100]
+
+lb_iter = [0.00001, 0.00001]
+ub_iter = [1000, 10]
 
 counter = 0
 
-configure_experiment_run("RMSE_trunc_kspace_div_tst2")
+configure_experiment_run("RMSE_iter_Tik_tst1")
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
-result = nomad.optimize(mri_suscep_calc_optimizer_kspace_optimizer, x0, lb, ub, nomad_params)
+result = nomad.optimize(mri_suscep_calc_optimizer_iter_Tik_optimizer, x0_iter_Tik, lb_iter, ub_iter, nomad_params)
 # We use SMV_OFF optimizer because the radius must be fixed based on the acquisition parameters and the FOV, so we do not optimize it
 # For the simulations, SMV radius is set to 3, we'll fix it to that and just test lambda and percentage
 
