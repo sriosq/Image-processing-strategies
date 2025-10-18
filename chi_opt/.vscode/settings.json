@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./susceptibility-to-fieldmap-fft"
+    ]
+}

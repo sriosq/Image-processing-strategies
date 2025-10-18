@@ -106,11 +106,12 @@ def lbv_optimizer(x):
 
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
+   
+    tolerance = 0.1# Fixed tolerance
+    depth = x.get_coord(0)
+    peel = x.get_coord(1)
+    print(f"Current parameters: Tolerance={tolerance}, Depth={x.get_coord(0)}, Peel={x.get_coord(1)}")
 
-    tolerance = x.get_coord(0)
-    depth = x.get_coord(1)
-    peel = x.get_coord(2)
-    
     iteration_fn = f"lbv_run{counter}/"
 
     output_fn = str(os.path.join(iter_folder,iteration_fn+"Sepia"))
@@ -207,10 +208,10 @@ def lbv_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 3",
-    "BB_INPUT_TYPE (R I I)",
+    "DIMENSION 2",
+    "BB_INPUT_TYPE (I I)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 600",
+    "MAX_BB_EVAL 300",
     "DISPLAY_DEGREE 2",
     #"STATS_FILE nomad_stats_test4.txt $ BBE $ ( SOL )  & $ %.5EOBJ $ ( TIME )",
     "DISPLAY_ALL_EVAL false",
@@ -230,18 +231,18 @@ nomad_params = [
 # Peel refers to how many boundary layers are peeled off, chose low upper bound because SC is small (hypothesis), lowest possible value is 0
 # Begin:
 start_time = time.time()
-x0 = [0.0001, 5, 2] # Recommended by SEPIA (for brain): 0.001, 5, 2
+x0 = [5, 2] # Recommended by SEPIA (for brain): tolerance = 0.0001, 5, 2
 
-lb = [0.0000001, 0, 1]
+lb = [0, 1]
 
-ub=[0.1, 8, 5]
+ub=[8, 8]
 
 counter = 0
 
-configure_experiment_run("RMSE_test1_VNS_ON")
+configure_experiment_run("tol_fixed/RMSE_test5_tol_1e-1")
 best_obj_value = float('inf')
 load_groun_truth_data()
-
+print("Starting NOMAD optimization...")
 result = nomad.optimize(lbv_optimizer, x0, lb, ub, nomad_params)
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]

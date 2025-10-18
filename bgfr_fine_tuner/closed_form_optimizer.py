@@ -238,15 +238,16 @@ nomad_params = [
 # - Then set optimise = True and let the L-curve determine the optimal lambda - done manually in SEPIA.
 # Begin:
 start_time = time.time()
-x0 = [0.13] # Recommended by SEPIA (for brain)
+x0 = [0] # Recommended by SEPIA (for brain) = 0.13, for our phantom the self-optimized value was calculated to be 0.17779
 
-lb = [0.0000001]
+lb = [0]
 
 ub = [1]
 
 counter = 0
 
-configure_experiment_run("RMSE_in_gt_lf_tst1")
+configure_experiment_run("RMSE_test3_start_from_0")
+
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 

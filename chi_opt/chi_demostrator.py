@@ -94,8 +94,10 @@ vertebrae_subset = ["C5", "C6", "C7", "T1", "T2", "T3", "T4", "T5", "T6", "T7"] 
 # With that done we can plot them:
 vertebrae_levels_joint_opt = ['C5', 'C6', 'C7', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] # From 5 to 14
 
+# Load the optimized - final plot 
 
-def set_susceptibility_and_show_B0(x1, x2):
+
+def set_susceptibility_and_show_B0(x1, x2, participand_id):
     global sim_chi_data32, sim_chi_data35, ind_trachea32, ind_lungs32, ind_trachea35, ind_lungs35
     global dmod_sim_mask32, dmod_sim_mask35, sim32metric_mask, sim35_metric_mask
     global vertebrae_levels_joint_opt, vertebra_label_map
@@ -176,7 +178,115 @@ def set_susceptibility_and_show_B0(x1, x2):
         # Show the plot
     plt.show()
 
+def pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participant_id):
+    """
+    chi_pairs: list of tuples, e.g. [(0, -7), (0, -4), (0, -2) ...] where each tuple is (chi_trachea, chi_lungs)
+    chi_titles: list of strings, e.g. ["Susceptibility set#1 title", "Susceptibility set#2 title", ...]
+    participant_id: "Participant 1" -> uses db0_032 data
+                    "Participant 2" -> uses db0_035 data
+                    ... Eventually can add more participants if needed!
+    """
+    global sim_chi_data32, sim_chi_data35
+    global ind_trachea32, ind_lungs32, ind_trachea35, ind_lungs35
+    global dmod_sim_mask32, dmod_sim_mask35
+    global sim32metric_mask, sim35_metric_mask
+    global vertebrae_levels_joint_opt, vertebra_label_map, vertebrae_subset
+    global db0_032_avg_dmod_metric_values, db0_035_avg_dmod_metric_values
+    global central_freq_db32, central_freq_db35, compute_fieldmap
+    global path_to_chimap32, path_to_chimap35
+
+    # Select subject-specific variables
+    if participant_id == "Participant 1":
+        sim_chi_data = sim_chi_data32
+        ind_trachea = ind_trachea32
+        ind_lungs = ind_lungs32
+        dmod_sim_mask = dmod_sim_mask32
+        sim_metric_mask = sim32metric_mask
+        db0_meas_values = db0_032_avg_dmod_metric_values
+        central_freq = central_freq_db32
+        path_to_chimap = path_to_chimap32
+        subj_label = "Participant 1"
+        participant_colorhex = "#EC3838"
+
+    elif participant_id == "Participant 2":
+        sim_chi_data = sim_chi_data35
+        ind_trachea = ind_trachea35
+        ind_lungs = ind_lungs35
+        dmod_sim_mask = dmod_sim_mask35
+        sim_metric_mask = sim35_metric_mask
+        db0_meas_values = db0_035_avg_dmod_metric_values
+        central_freq = central_freq_db35
+        path_to_chimap = path_to_chimap35
+        subj_label = "Participant 2"
+        participant_colorhex = "#12269B"
+    else:
+        raise ValueError("participant_id must be 'Participant 1' or 'Participant 2'")
+
+    # Load χ distribution and image resolution
+    chi_dist, image_res, _ = compute_fieldmap.load_sus_dist(path_to_chimap)
+
+    plt.figure(figsize=(10, 6))
+    # Counter to loop over multiple entries
+    counter = 0
+    # Loop over χ pairs
+    for chi_trachea, chi_lungs in chi_pairs:
+        # Assign susceptibilities
+        
+        sim_chi_data[ind_trachea] = chi_trachea
+        sim_chi_data[ind_lungs] = chi_lungs
+
+        # Compute B0 [ppm] → [Hz]
+        sim_b0_ppm = compute_fieldmap.compute_bz(sim_chi_data, image_resolution=image_res, buffer=50)
+        sim_b0_Hz = sim_b0_ppm * central_freq
+
+        # Demodulate
+        iter_demod_value = np.mean(sim_b0_Hz[dmod_sim_mask == 1])
+        demod_iter_fm_Hz = sim_b0_Hz - iter_demod_value
+
+        # Compute vertebra-level means
+        dmod_sim_fm_vert_values = []
+        for v in vertebrae_subset:
+            label = vertebra_label_map[v]
+            mask = (sim_metric_mask == label)
+            dmod_sim_fm_vert_values.append(np.mean(demod_iter_fm_Hz[mask]))
+
+        # Plot simulated curve
+        chi_values = f"Tr={chi_trachea}, Lg={chi_lungs}"
+
+        plt.plot(vertebrae_levels_joint_opt,
+                 dmod_sim_fm_vert_values,
+                 marker='o', linestyle='-',
+                 label=f"{chi_titles[counter]} values [ppm]: ({chi_values})",
+                 color=colors[counter],
+                 alpha=0.8)
+        
+        counter += 1
+
+    # Add measured (in-vivo) reference
+    plt.plot(vertebrae_levels_joint_opt,
+             db0_meas_values,
+             marker='x', linestyle='--',
+             color=participant_colorhex,
+             label=f"In-vivo measured")
+
+    # Format plot
+    plt.title(f"Simulation vs. In-vivo Fieldmaps - {participant_id}", fontsize=18)
+    plt.xlabel('Vertebral Level', fontsize=18)
+    plt.ylabel('B0 [Hz]', fontsize=18)
+
+    plt.legend(fontsize=16)
+    plt.yticks(range(-160, 160, 20), fontsize=16)
+    plt.xticks(fontsize=16)
+    plt.grid(True, linestyle='--', linewidth=0.9)
+    plt.tight_layout()
+    plt.show()
 
 
-set_susceptibility_and_show_B0(0, -7) # Example values
+participant_id = "Participant 1" # db0_033 is 1 and db0_035 is 2
+# Now, we will select chi pairs to show initial and effective susceptibility (after optimization)
+chi_pairs = [(0, -7), (0.196, -2.34)] # Example pairs of (chi_trachea, chi_lungs)
+chi_titles = ["Initial Susceptibility", "Optimized Susceptibility"]
+colors = ["#14EE31C7", "#EC3838"]
+##################################################################################################
+pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participant_id) # Call to plot 
 

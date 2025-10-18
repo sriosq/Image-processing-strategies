@@ -104,9 +104,9 @@ def pdf_optimizer(x):
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
 
-    tolerance = x.get_coord(0)
-    num_iters = x.get_coord(1)
-    padSize = x.get_coord(2)
+    tolerance = 0.1
+    num_iters = 50
+    padSize = x.get_coord(0)
     
     iteration_fn = f"pdf_run{counter}/"
 
@@ -204,10 +204,10 @@ def pdf_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 3",
-    "BB_INPUT_TYPE (R I I)",
+    "DIMENSION ",
+    "BB_INPUT_TYPE (I)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 600",
+    #"MAX_BB_EVAL 600",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -220,15 +220,15 @@ nomad_params = [
 # We select based on the experience and complexity of field variations
 # Begin:
 start_time = time.time()
-x0 = [0.1, 50, 40] # Recommended by SEPIA (for brain)
+x0 = [40] # Recommended by SEPIA (for brain)
 
-lb = [0.0000000001, 10, 10]
+lb = [00]
 
-ub=[0.1, 200, 80]
+ub=[100]
 
 counter = 0
 
-configure_experiment_run("RMSE_test1_VNS_on")
+configure_experiment_run("fixed_tol_numIter/RMSE_test4_VNS_on")
 best_obj_value = float('inf')
 load_groun_truth_data()
 

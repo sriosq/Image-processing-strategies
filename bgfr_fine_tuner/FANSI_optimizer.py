@@ -132,14 +132,14 @@ def FANSI_optimizer(x):
     lmbda = x.get_coord(2)
     mu1 = x.get_coord(3)
     mu2 = x.get_coord(4)
-    solver = 'Linear'  # x.get_coord(5)  # 'Non-linear' or 'Linear' 
-    constraint = 'TV'  # x.get_coord(6)  # 'TGV' or 'TV' 
+    solver = 'Non-Linear'  # x.get_coord(5)  # 'Non-linear' or 'Linear' 
+    constraint = 'TGV'  # x.get_coord(6)  # 'TGV' or 'TV' 
     gmode = 'Vector field'  # x.get_coord(7)  # 'Vector field', 'L1', 'L2',  or 'None'
     # First do all the optimization with isWeakHarmonic = 0 then we use 1 
     # Then we add x.get_coord for both beta and muh
-    isWeakHarmonic = '0'  # x.get_coord(8)  # '1' or '0'
-    beta = 0.1  # x.get_coord(9)  # Harmonic constraint
-    muh = 0.1  # x.get_coord(10)  # Harmonic consistency
+    isWeakHarmonic = '1'  # x.get_coord(8)  # '1' or '0'
+    beta = x.get_coord(5)  # x.get_coord(9)  # Harmonic constraint
+    muh = x.get_coord(6)  # x.get_coord(10)  # Harmonic consistency
     
     iteration_fn = f"FANSI_run{counter}/"
 
@@ -266,11 +266,17 @@ nomad_params = [
 # The percentage is the percentage of the local field to use, we can try from 1 to 99
 # Begin:
 start_time = time.time()
-x0 = [0.1, 150, 0.0002, 0.02, 1] # Recommended by SEPIA (for brain)
+x0_weakOFF = [0.1, 150, 0.0002, 0.02, 1] # Recommended by SEPIA (for brain)
 
-lb = [0.000001, 50, 0.000001, 0.001, 0.001]
+lb_weakOFF = [0.000001, 50, 0.000001, 0.001, 0.001]
 
-ub = [0.9, 1000, 0.01, 1, 100]
+ub_weakOFF = [0.9, 1000, 0.01, 1, 100]
+
+x0_weakON = [0.1, 150, 0.0002, 0.02, 1, 150, 3] # Recommended by SEPIA (for brain)
+
+lb_weakON = [0.000001, 50, 0.000001, 0.001, 0.001]
+
+ub_weakON = [0.9, 1000, 0.01, 1, 100]
 
 counter = 0
 # In total there will be 24 runs:
@@ -304,12 +310,12 @@ counter = 0
 # XXIII_non-linear_TV_vector_field_weakH_on
 # XXIV_linear_TV_vector_field_weakH_on
 
-first_line = "Optimization results for FANSI, Linear TV Vector field:"
-configure_experiment_run("XII_linear_TV_vector_field_weakH_off/test1", first_line)
+first_line = "Optimization results for FANSI, Non-Linear TGV Vector field, weak harmonics ON:"
+configure_experiment_run("XIII_non-linear_TGV_vector_field_weakH_on/test1", first_line)
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
-result = nomad.optimize(FANSI_optimizer, x0, lb, ub, nomad_params)
+result = nomad.optimize(FANSI_optimizer, x0_weakON, lb_weakON, ub_weakON, nomad_params)
 
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]

@@ -1,0 +1,3 @@
+sct_crop_image -i inbody_plus_contour.nii.gz -g 1 -o cropped_body_plus_contour.nii.gz
+
+Use the -g enabled option to use a GUI to crop image.

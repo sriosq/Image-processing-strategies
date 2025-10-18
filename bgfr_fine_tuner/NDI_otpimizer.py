@@ -110,9 +110,9 @@ def NDI_optimizer(x):
 
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
-    tol = x.get_coord(0)
-    maxiter = x.get_coord(1)
-    stepSize = x.get_coord(2)
+    tol = 0.5
+    maxiter = 300
+    stepSize = x.get_coord(0)
     isGPU = 0
     
     iteration_fn = f"NDI_run{counter}/"
@@ -124,6 +124,7 @@ def NDI_optimizer(x):
         print("Created folder for new iteration #",counter)
     
     print("Output FN used:", output_fn)
+
     best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz")
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
@@ -215,10 +216,10 @@ def NDI_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 3",
-    "BB_INPUT_TYPE (R I R)",
+    "DIMENSION 1",
+    "BB_INPUT_TYPE (R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 50",
+    "MAX_BB_EVAL 150",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -226,21 +227,21 @@ nomad_params = [
     "VNS_MADS_SEARCH_TRIGGER 0.75" # Max desired ration of VNS BBevals over the total number of BBevals
 ]
 # For NDI the paramters are Tolerance , maximum # of iterations and step size
-# Tolerance defines the convergence criterion, we select to use from 1e-6 for accuracy yet slower and also high values, which are faster but less accurate
+# Tolerance defines the convergence criterion, we can select to use from 1e-6 for accuracy yet slower and also high values, which are faster but less accurate
 # The maximum number of gradient decent steps higher values will be more accurate but also take longer we should test from 50 to 500
 # Step size controls the magntiude of each gradient descet step, higher values converge faster but may be prone to instability.
 # Begin:
 start_time = time.time()
-x0 = [1, 200, 1] # Recommended by SEPIA (for brain)
+x0 = [1] # Recommended by SEPIA (for brain)
 
-lb = [0.000001, 50, 0.001]
+lb = [0.001]
 
-ub = [1, 500, 5]
+ub = [10]
 
 counter = 0
 
-configure_experiment_run("RMSE_in_gt_lf_tst1")
-best_obj_value = float('inf')
+configure_experiment_run("fixed_tol_numIter/RMSE_test2")
+best_obj_value = float('inf') 
 load_groun_truth_chidist_data()
 
 result = nomad.optimize(NDI_optimizer, x0, lb, ub, nomad_params)
