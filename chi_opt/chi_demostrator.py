@@ -178,7 +178,7 @@ def set_susceptibility_and_show_B0(x1, x2, participand_id):
         # Show the plot
     plt.show()
 
-def pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participant_id):
+def pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participant_id, linestyles):
     """
     chi_pairs: list of tuples, e.g. [(0, -7), (0, -4), (0, -2) ...] where each tuple is (chi_trachea, chi_lungs)
     chi_titles: list of strings, e.g. ["Susceptibility set#1 title", "Susceptibility set#2 title", ...]
@@ -196,6 +196,7 @@ def pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participan
     global path_to_chimap32, path_to_chimap35
 
     # Select subject-specific variables
+    # Participants measured will have same color hex as the rectangles in the figure
     if participant_id == "Participant 1":
         sim_chi_data = sim_chi_data32
         ind_trachea = ind_trachea32
@@ -206,7 +207,7 @@ def pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participan
         central_freq = central_freq_db32
         path_to_chimap = path_to_chimap32
         subj_label = "Participant 1"
-        participant_colorhex = "#EC3838"
+        participant_colorhex = "#A02B93"
 
     elif participant_id == "Participant 2":
         sim_chi_data = sim_chi_data35
@@ -218,7 +219,7 @@ def pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participan
         central_freq = central_freq_db35
         path_to_chimap = path_to_chimap35
         subj_label = "Participant 2"
-        participant_colorhex = "#12269B"
+        participant_colorhex = "#A02B93"
     else:
         raise ValueError("participant_id must be 'Participant 1' or 'Participant 2'")
 
@@ -255,8 +256,8 @@ def pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participan
 
         plt.plot(vertebrae_levels_joint_opt,
                  dmod_sim_fm_vert_values,
-                 marker='o', linestyle='-',
-                 label=f"{chi_titles[counter]} values [ppm]: ({chi_values})",
+                 marker='o', linestyle=linestyles[counter],
+                 label=f"{chi_titles[counter]} Simulated B0 map - {participant_id}, using $\\chi$: {chi_values} ppm",
                  color=colors[counter],
                  alpha=0.8)
         
@@ -265,12 +266,13 @@ def pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participan
     # Add measured (in-vivo) reference
     plt.plot(vertebrae_levels_joint_opt,
              db0_meas_values,
-             marker='x', linestyle='--',
+             marker='x', linestyle='-.',
              color=participant_colorhex,
-             label=f"In-vivo measured")
+             label=f"Respiration-averaged B0 map")
 
     # Format plot
-    plt.title(f"Simulation vs. In-vivo Fieldmaps - {participant_id}", fontsize=18)
+    plt.title(f"Nomad-Optimized $\\chi$ Trachea= {0.196} [ppm], $\\chi$ Lung= {-2.36} [ppm]", fontsize=20)
+    #plt.title(f"Optimization of Simulated B0 map - {participant_id}", fontsize=18)
     plt.xlabel('Vertebral Level', fontsize=18)
     plt.ylabel('B0 [Hz]', fontsize=18)
 
@@ -282,11 +284,12 @@ def pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participan
     plt.show()
 
 
-participant_id = "Participant 1" # db0_033 is 1 and db0_035 is 2
+participant_id = "Participant 2" # db0_033 is 1 and db0_035 is 2
 # Now, we will select chi pairs to show initial and effective susceptibility (after optimization)
-chi_pairs = [(0, -7), (0.196, -2.34)] # Example pairs of (chi_trachea, chi_lungs)
-chi_titles = ["Initial Susceptibility", "Optimized Susceptibility"]
-colors = ["#14EE31C7", "#EC3838"]
+chi_pairs = [(0, -4.2), (0.196, -2.36)] # Example pairs of (chi_trachea, chi_lungs)
+chi_titles = ["Initial", "Optimized"]
+linestyles = ['--', '-']
+colors = ["#0C9C1A", "#0C9C1A"]
 ##################################################################################################
-pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participant_id) # Call to plot 
+pro_set_susceptibility_and_show_B0(chi_pairs, chi_titles, colors, participant_id, linestyles) # Call to plot 
 
