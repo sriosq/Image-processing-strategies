@@ -1,0 +1,18 @@
+[package]
+name = "rusty_bgfr"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ndarray = "0.15"
+
+rustfft = "6"
+
+num-complex = "0.4"
+
+nifti = "0.16.0"
+
+
+
+
+

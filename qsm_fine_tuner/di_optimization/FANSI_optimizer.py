@@ -8,7 +8,7 @@ import sys
 import json
 import time  
 
-def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, tol, maxiter, lmbda, mu1, mu2, solver, constraint, gmode, isWeakHarmonic=0, beta=150, muh=3):
+def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, tol, maxiter, lmbda, mu1, mu2, solver, constraint, gmode, isWeakHarmonic, beta, muh):
     eng = matlab.engine.start_matlab()
 
     sepia_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
@@ -40,6 +40,7 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, tol, maxi
         'isBET' : '0',
         'isInvert':'0',
         'isRefineBrainMask' : '0'
+
     },
     'qsm':{
     'reference_tissue': "Brain mask",
@@ -52,7 +53,7 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, tol, maxi
     'solver': solver,
     'constraint': constraint,   
     'gradient_mode': gmode,
-    'isGPU': '1',
+    'isGPU': '0',
     'isWeakHarmonic': isWeakHarmonic,
     'beta': beta, # Harmonic constraint
     'muh': muh # Harmonic consistency
@@ -121,25 +122,28 @@ def log_best_solution(obj_value, iteration, tol, maxiter, lmbda, mu1, mu2, solve
                 file.write(f"Iterration: {iteration}: OBJ {obj_value} // Tolerance: {tol}, #of Iter: {maxiter}, Lamba:{lmbda}, // Gradient Consistency: {mu1}, Fidelity consistency: {mu2}, Solver: {solver}, Constraint: {constraint}, Gradient mode: {gmode}, WeakH: {isWeakH}, Harmonic constraint: {beta}, Harmonic consistency: {muh} // GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
 
 
-def FANSI_optimizer(x):
+def FANSI_optimizer_weakH_off(x):
     global counter
 
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
     # 
-    tol = x.get_coord(0)
-    maxiter = x.get_coord(1)
-    lmbda = x.get_coord(2)
-    mu1 = x.get_coord(3)
-    mu2 = x.get_coord(4)
-    solver = 'Non-Linear'  # x.get_coord(5)  # 'Non-linear' or 'Linear' 
-    constraint = 'TGV'  # x.get_coord(6)  # 'TGV' or 'TV' 
-    gmode = 'Vector field'  # x.get_coord(7)  # 'Vector field', 'L1', 'L2',  or 'None'
-    # First do all the optimization with isWeakHarmonic = 0 then we use 1 
+    tol = 0.05
+    maxiter = 300
+    lmbda = x.get_coord(0) # alpha is lambda1, this is how SEPIA handles it, I will submit a change to their repo becuase its confusing
+    mu1 = 100*lmbda # Gradient consistency
+    mu2 = 1 # Fidelity consistency
+    solver = 'Non-linear'  # 'Non-linear' or 'Linear', we fix to non-linear
+    constraint = 'TV'  # 'TGV' or 'TV', we fix to TV
+    gmode = 'L2'  # 'Vector field', 'L1', 'L2',  or 'None' 
+    # Test and assess diffenrent gradient modes both in-vivo and in-sillico
+
+    # First we do with weak harmonic off, phantom shouldn't need weak ON?
+    # Perhaps after adding noise then we could use it, I would try a couple optimizers with ON and assess if there is any benefit for the phantom
     # Then we add x.get_coord for both beta and muh
-    isWeakHarmonic = '1'  # x.get_coord(8)  # '1' or '0'
-    beta = x.get_coord(5)  # x.get_coord(9)  # Harmonic constraint
-    muh = x.get_coord(6)  # x.get_coord(10)  # Harmonic consistency
+    isWeakHarmonic = '0'  # Fixed and unused when isWeakHarmonic = 0
+    beta = 150   # Harmonic constraint
+    muh = 3  # Harmonic consistency
     
     iteration_fn = f"FANSI_run{counter}/"
 
@@ -158,7 +162,7 @@ def FANSI_optimizer(x):
     # Some algorithms use the magnitude for weighting! Should be input #2
     gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution
-    sepia_weights_path = mask_filename
+    sepia_weights_path = ""
     
     in1 = best_local_field_path
     in2 = gauss_sim_ideal_mag_path 
@@ -215,15 +219,14 @@ def FANSI_optimizer(x):
 
     print(f"Iter {counter}: GM+WM RMSE = {objective_value}")
 
-    # Increase counter
-    counter += 1
+
     # Data to save
 
     sidecar_data = {
         "iteration": counter,
         "tolerance": tol,
         "max_iterations": maxiter,
-        "Gradient penalty": lmbda,
+        "Gradient penalty": lmbda, 
         "Gradient consistency": mu1,
         "Fidelity consistency ": mu2,
         "solver": solver,
@@ -243,6 +246,9 @@ def FANSI_optimizer(x):
         json.dump(sidecar_data, json_file, indent=4)
     print("Sidecar data saved to:", json_filename)
 
+    # Increase counter
+    counter += 1
+
     rawBBO = str(objective_value)
     x.setBBO(rawBBO.encode("UTF-8"))
 
@@ -250,33 +256,51 @@ def FANSI_optimizer(x):
 
 #############################################################################################################################################
 
-nomad_params = [
-    "DIMENSION 5",
-    "BB_INPUT_TYPE (R I R R R)", # tol, maxiter, lmbda, mu1, mu2
+nomad_params_weak_OFF = [
+    "DIMENSION 1",
+    "BB_INPUT_TYPE (R)", # lmbda, mu1, mu2, beta and muh
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 350",
+    "MAX_BB_EVAL 100",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
 ]
-# For MEDI the only parameters to optimize are the lambda, percentage and radius
-# The lambda is the regularization parameter, percentage is the percentage of the local field to use and radius is the SMV radius
-# The radius is to get rid of any leftover background field in the local field, we can try with the same range as the SHARP
-# Lambda seems different for this algorithm as the default value is 1000, therefore we will try to use from 1e-6 to +inf
-# The percentage is the percentage of the local field to use, we can try from 1 to 99
+
+nomad_params_weak_ON = [
+    "DIMENSION 5",
+    "BB_INPUT_TYPE (R R R R R)", # lmbda, mu1, mu2, beta and muh
+    "BB_OUTPUT_TYPE OBJ",
+    "MAX_BB_EVAL 20",
+    "DISPLAY_DEGREE 2",
+    "DISPLAY_ALL_EVAL false",
+    "DISPLAY_STATS BBE OBJ"
+]
+# After careful revition of the paper + the code and the theory for FANSI, we'll fix the solver as well as the constraint
+# The gradient mode can also be fixed but studying how different modes affect the outcome would be interesting
+    # L1 promotes sparsity, L2 smoother gtradients, Vector field is the most complete but also computationally heavy (?) 
+# For the optimization we want realistic final values so boundaries are selected thinking on translation of in-sillico to in-vivo scenarios
+# The fidelity terms, ergo, mu2 - fidelity consistency that starts at 1 could go from 0.01 to 10, if to high noisy reconstruction, to low may not converge 
+# then, weight is taken from the magnitude, because our simulations are realistic I don't see why not giving it to the solver, the tolerance is fixed
+
+# The, regularization terms: alpha - gradient l1 penalty, mu1 gradient consistency
+
+# 
+
 # Begin:
 start_time = time.time()
-x0_weakOFF = [0.1, 150, 0.0002, 0.02, 1] # Recommended by SEPIA (for brain)
+# Parameters are: [lmbda, mu1, mu2, beta, muh] beta and muh are only used if isWeakHarmonic = 1
+x0_weakOFF = [0.0002] # Recommended by SEPIA (for brain)
 
-lb_weakOFF = [0.000001, 50, 0.000001, 0.001, 0.001]
+lb_weakOFF = [0.0000001]
 
-ub_weakOFF = [0.9, 1000, 0.01, 1, 100]
+ub_weakOFF = [0.1]
 
-x0_weakON = [0.1, 150, 0.0002, 0.02, 1, 150, 3] # Recommended by SEPIA (for brain)
+######################################################################################
+x0_weakON = [0.0002, 0.02, 1, 150, 3] # Recommended by SEPIA (for brain)
 
-lb_weakON = [0.000001, 50, 0.000001, 0.001, 0.001]
+lb_weakON = [0.000001, 0.1, 0.001, 1, 0.1]
 
-ub_weakON = [0.9, 1000, 0.01, 1, 100]
+ub_weakON = [0.01, 2, 10, 300, 30]
 
 counter = 0
 # In total there will be 24 runs:
@@ -310,12 +334,12 @@ counter = 0
 # XXIII_non-linear_TV_vector_field_weakH_on
 # XXIV_linear_TV_vector_field_weakH_on
 
-first_line = "Optimization results for FANSI, Non-Linear TGV Vector field, weak harmonics ON:"
-configure_experiment_run("XIII_non-linear_TGV_vector_field_weakH_on/test1", first_line)
+first_line = "Optimization results for FANSI, Non-Linear TV L2, weak harmonics OFF:"
+configure_experiment_run("heuristic_non-linear_TV_L2_weakH_on/test1", first_line)
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
-result = nomad.optimize(FANSI_optimizer, x0_weakON, lb_weakON, ub_weakON, nomad_params)
+result = nomad.optimize(FANSI_optimizer_weakH_off, x0_weakOFF, lb_weakOFF, ub_weakOFF, nomad_params_weak_OFF)
 
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]

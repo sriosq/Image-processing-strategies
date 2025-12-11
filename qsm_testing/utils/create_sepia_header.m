@@ -157,3 +157,34 @@ matrixSize = [301, 351, 128]; % The "dimensions" of the image used
 voxelSize = [0.976562, 0.976562, 2.344]; % Pixdim 
 
 save("testing_headers2.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+
+%% Header for chi_003, we have 4 testing protocols:
+% for m2: [0.00693, 0.01185, 0.01685, 0.02185, 0.02685], 
+% matrixSize = [384, 384, 16], voxelSize = [0.4427, 0.4427, 5]
+% for m4: [0.00661, 0.01067, 0.01473, 0.01879, 0.02285], 
+% matrixSize = [320, 320, 16], voxelSize = [0.5312, 0.5312, 5];
+% for m6: [0.00606, 0.01106, 0.01606, 0.02106, 0.02606], 
+% matrixSize = [272, 272, 16], voxelSize = [0.625, 0.625, 5]
+% Now that we know that Sepia expects echo times in seconds
+TE = [0.00606, 0.01106, 0.01606, 0.02106, 0.02606];
+B0 = 3;
+B0_dir = [0;0;1];
+CF = 123249367; % In Hz, B0 * gyromagnetic ratio 123.249367 127740000
+matrixSize = [272, 272, 16]; % The "dimensions" of the image used
+voxelSize = [0.625, 0.625, 5]; % Pixdim 
+
+save("chi_003_m6_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+
+%% Header for Swiss 7T 
+% 
+
+TE = [0.00455, 0.00881, 0.01307, 0.01733, 0.02159];
+B0 = 7;
+B0_dir = [0;0;1];
+% CF = 123249367; % In Hz, B0 * gyromagnetic ratio 123.249367 127740000 ->
+% The above CF is for 3T, for Swiss 7T they used a 7T Siemens 
+CF = 297189000;
+matrixSize = [500, 510, 12]; % The "dimensions" of the image used
+voxelSize = [0.256, 0.256, 6]; % Pixdim 
+
+save("swiss_7T_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");

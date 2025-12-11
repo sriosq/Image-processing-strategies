@@ -302,8 +302,6 @@ def MEDI_SMV_ON_optimizer(x):
     #wm_mean = np.mean(local_field_data[wm_mask_data == 1])
     #print("WM_mean: ", wm_mean)
 
-    # Increase counter
-    counter += 1
 
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
@@ -327,7 +325,8 @@ def MEDI_SMV_ON_optimizer(x):
     with open(json_filename, 'w') as json_file:
         json.dump(sidecar_data, json_file, indent=4)
     print("Sidecar data saved to:", json_filename)
-
+    # Increase counter
+    counter += 1
     rawBBO = str(objective_value)
     x.setBBO(rawBBO.encode("UTF-8"))
 
@@ -355,15 +354,15 @@ nomad_params = [
 # When disabling SMV, the radius is not used and we can find the optimized parameters for the other two
 # Begin:
 start_time = time.time()
-x0 = [1000, 20, 3] # Recommended by SEPIA is 1000 and 90, but based on understanding of our FOV and the algorithm, we should try lower percentage, lambda is to be tested
+x0 = [2500, 70, 2] # Recommended by SEPIA is 1000 and 90, but based on understanding of our FOV and the algorithm, we should try lower percentage, lambda is to be tested
 
-lb = [0.001, 1, 0]
+lb = [0.001, 20, 1]
 
-ub = [8000, 90, 10]
+ub = [2600, 75, 3]
 
 counter = 0
 
-configure_experiment_run("RMSE_in_gt_lf_tst1")
+configure_experiment_run("RMSE_in_gt_lf_tst3")
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 

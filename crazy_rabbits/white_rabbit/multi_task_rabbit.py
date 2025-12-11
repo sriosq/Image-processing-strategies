@@ -1,17 +1,19 @@
 
 import time
+import os
 import sys
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QLineEdit, QProgressBar, QColorDialog, QSpinBox
 )
 from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QIcon
 
 
 class TaskWidget(QWidget):
     def __init__(self, name, goal_minutes, color):
         super().__init__()
+
         self.name = name
         self.goal_seconds = goal_minutes * 60
         self.elapsed = 0
@@ -37,10 +39,14 @@ class TaskWidget(QWidget):
         self.kill_button = QPushButton("Kill")
         self.kill_button.clicked.connect(self.kill_timer)
 
+        self.reset_button = QPushButton("Reset")
+        self.reset_button.clicked.connect(self.reset_timer)
+
         layout.addWidget(self.label)
         layout.addWidget(self.progress)
         layout.addWidget(self.start_button)
         layout.addWidget(self.kill_button)
+        layout.addWidget(self.reset_button)
         self.setLayout(layout)
 
     def toggle_timer(self):
@@ -68,23 +74,33 @@ class TaskWidget(QWidget):
             self.start_button.setEnabled(False)
 
     def kill_timer(self):
-        # This closes the app so I need to fix that, maybe adding one widget on top so that there is always 1 widget?
+        # This closes the app, I need to fix that, maybe adding one widget on top so that there is always 1 widget active?
         self.timer.stop()
-        #self.running = False
-        #self.elapsed = 0
-        #self.progress.setValue(0)
-        #self.start_button.setText("Start")
-        #self.start_button.setEnabled(True)
-        parent_layout = self.parentWidget().layout()
-        parent_layout.removeWidget(self)
-        self.deleteLater()  # safely removes from memory
+        parent = self.parent()
+        if parent and isinstance(parent.layout(), QVBoxLayout):
+            parent.layout().removeWidget(self)
+        self.setParent(None)
+        self.deleteLater()
+
+    def reset_timer(self):
+        self.timer.stop()
+        self.running = False
+        self.elapsed = 0
+        self.progress.setValue(0)
+        self.start_button.setText("Start")
+        self.start_button.setEnabled(True)
+
+        self.label.setText(f"{self.name}: 0:00 / {self.goal_seconds // 60} min")
 
 
 class MultiTaskRabbit(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Multi Task Rabbit 🐇")
-        self.layout = QVBoxLayout()
+
+        self.setWindowIcon(QIcon("nuclear_timer.ico"))
+
+        self.setWindowTitle("Timer Rabbit 🐇")
+        self.layout = QVBoxLayout(self)
 
         # Input for new tasks
         input_layout = QHBoxLayout()
@@ -93,7 +109,7 @@ class MultiTaskRabbit(QWidget):
 
         self.time_input = QSpinBox()
         self.time_input.setRange(1, 720)
-        self.time_input.setValue(30)
+        self.time_input.setValue(60)
         self.time_input.setSuffix(" min")
 
         self.color_button = QPushButton("Pick Color")
@@ -108,8 +124,15 @@ class MultiTaskRabbit(QWidget):
         input_layout.addWidget(self.color_button)
         input_layout.addWidget(self.add_button)
 
+        # Creating a task container to add and remove tasks safely
+        self.tasks_container = QWidget()
+        self.tasks_layout = QVBoxLayout()
+        self.tasks_container.setLayout(self.tasks_layout)
+
+
+        # Add both layouts to main layout
         self.layout.addLayout(input_layout)
-        self.setLayout(self.layout)
+        self.layout.addWidget(self.tasks_container)
 
     def pick_color(self):
         color = QColorDialog.getColor()
@@ -123,12 +146,11 @@ class MultiTaskRabbit(QWidget):
         color = self.selected_color
 
         task = TaskWidget(name, goal_minutes, color)
-        self.layout.addWidget(task)
+        self.tasks_layout.addWidget(task)
 
         # reset inputs
         self.name_input.clear()
         self.time_input.setValue(30)
-
 
 def main():
     app = QApplication(sys.argv)

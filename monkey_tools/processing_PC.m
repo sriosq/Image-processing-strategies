@@ -130,6 +130,79 @@ hold off;
 
 
 
+%%
 
+slices = {
+    'T20250625121020_NS_V_S22_i00001_ph.nii'
+    'T20250625121020_NS_V_S22_i00002_ph.nii'
+    'T20250625121020_NS_V_S22_i00004_ph.nii'
+    'T20250625121020_NS_V_S22_i00005_ph.nii'
+    'T20250625121020_NS_V_S22_i00007_ph.nii'
+    'T20250625121020_NS_V_S22_i00009_ph.nii'
+    'T20250625121020_NS_V_S22_i00011_ph.nii'
+    };
 
+% Read the first file to get NIFTI header + number of slices
+first = niftiread(slices{1});
+info = niftiinfo(slices{1});
+
+% Size of first file (Nx, Ny, Nz_in_first)
+[Nx, Ny, Nz1] = size(first);
+
+% Count total slices across all files
+total_slices = 0;
+for k = 1:numel(slices)
+    temp = niftiread(slices{k});
+    total_slices = total_slices + size(temp,3);
+end
+
+% Allocate 3D volume
+data = zeros(Nx, Ny, total_slices, class(first));
+
+% Fill the volume
+index = 1;
+for k = 1:numel(slices)
+    temp = niftiread(slices{k});
+    zcount = size(temp,3);
+    data(:,:,index:index+zcount-1) = temp;
+    index = index + zcount;
+end
+
+% Save final 3D volume
+identifier = "NS_V_S22_e1_stacked_ph.nii";
+outpath = "stacked/" + identifier;
+
+niftiwrite(data, outpath, 'Compressed', true);
+disp("Created: " + identifier);
+
+%%
+ref_slice  = "T20250625121020_NS_V_S22_i00001_ph.nii";
+stacked_file = "stacked/concatenated_echoes/NS_V_S22_ph.nii.gz";
+fixed_file   = "stacked/concatenated_echoes/fixed_NS_V_S22_ph";
+
+ref_hdr = niftiinfo(ref_slice);
+stacked_hdr = niftiinfo(stacked_file);
+stacked_data = niftiread(stacked_file);
+
+% Copy all three voxel dimensions (dx, dy, dz)
+stacked_hdr.PixelDimensions(1:3) = ref_hdr.PixelDimensions(1:3);
+
+% Also fix raw pixdim (NIfTI convention: pixdim(2)=dx, pixdim(3)=dy, pixdim(4)=dz)
+if isfield(stacked_hdr, 'Raw') && isstruct(stacked_hdr.Raw) && numel(stacked_hdr.Raw.pixdim) >= 4
+    stacked_hdr.Raw.pixdim(2:4) = ref_hdr.PixelDimensions(1:3);
+end
+
+% Ensure correct image size
+stacked_hdr.ImageSize = size(stacked_data);
+
+% Fix datatype
+stacked_hdr.Datatype = class(stacked_data);
+
+% Save
+niftiwrite(stacked_data, fixed_file, stacked_hdr, 'Compressed', true);
+
+% Print
+fixed_hdr = niftiinfo(fixed_file);
+disp(fixed_hdr.PixelDimensions);
+disp(fixed_hdr.ImageSize);
 
