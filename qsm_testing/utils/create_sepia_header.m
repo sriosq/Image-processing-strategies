@@ -184,7 +184,7 @@ B0_dir = [0;0;1];
 % CF = 123249367; % In Hz, B0 * gyromagnetic ratio 123.249367 127740000 ->
 % The above CF is for 3T, for Swiss 7T they used a 7T Siemens 
 CF = 297189000;
-matrixSize = [500, 510, 12]; % The "dimensions" of the image used
+matrixSize = [500, 510, 1]; % The "dimensions" of the image used
 voxelSize = [0.256, 0.256, 6]; % Pixdim 
 
-save("swiss_7T_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+save("swiss_7T_m1_s1_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");

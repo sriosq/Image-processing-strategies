@@ -63,7 +63,7 @@ def configure_experiment_run(test_fn):
 
     print("GM and WM masks loaded successfully.")
 
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params/bgfr_opt\iter_PDF/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_PDF/{test_fn}"
     
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -72,7 +72,7 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params/bgfr_opt\iter_PDF/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_PDF/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
         
@@ -80,7 +80,7 @@ def configure_experiment_run(test_fn):
 
 def load_groun_truth_data():
     global crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data
-    crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
+    crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
 
 def log_best_solution(obj_value, iteration, tolerance, max_iters, padSize, gm_rmse, wm_rmse):
@@ -104,9 +104,9 @@ def pdf_optimizer(x):
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
 
-    tolerance = 0.1
-    num_iters = 50
-    padSize = x.get_coord(0)
+    tolerance = x.get_coord(0)
+    num_iters = 250
+    padSize = x.get_coord(1)
     
     iteration_fn = f"pdf_run{counter}/"
 
@@ -119,9 +119,9 @@ def pdf_optimizer(x):
     print("Output FN used:", output_fn)
 
     #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\fm_tests\test1_simple\B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_74\fm_tests\test1_simple\B0.nii")
     # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks/qsm_processing_msk_crop.nii.gz")
 
     in1 = custom_fm_path
@@ -169,10 +169,7 @@ def pdf_optimizer(x):
     #print("GM_mean: ", gm_mean)
     #wm_mean = np.mean(local_field_data[wm_mask_data == 1])
     #print("WM_mean: ", wm_mean)
-
-    # Increase counter
-    counter += 1
-
+    
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
@@ -190,7 +187,11 @@ def pdf_optimizer(x):
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
     }
-    # We want this to be saved in the precie run so:
+
+    # Increase counter
+    counter += 1
+
+    # We want this to be saved in the precise run so:
     json_filename = os.path.join(iter_folder, iteration_fn, "sidecar_data.json")
     with open(json_filename, 'w') as json_file:
         json.dump(sidecar_data, json_file, indent=4)
@@ -204,10 +205,10 @@ def pdf_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION ",
-    "BB_INPUT_TYPE (I)",
+    "DIMENSION 2",
+    "BB_INPUT_TYPE (R I)",
     "BB_OUTPUT_TYPE OBJ",
-    #"MAX_BB_EVAL 600",
+    "MAX_BB_EVAL 100",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -215,20 +216,21 @@ nomad_params = [
     "VNS_MADS_SEARCH_TRIGGER 0.75" # Max desired ration of VNS BBevals over the total number of BBevals
 ]
 
+
 # For PDF the x0 should be [tolerance, num_iters, padSize]
 # Bounds for this parameters are not directly given by formulas or references
 # We select based on the experience and complexity of field variations
 # Begin:
 start_time = time.time()
-x0 = [40] # Recommended by SEPIA (for brain)
+x0 = [0.1, 40] # Recommended by SEPIA (for brain)
 
-lb = [00]
+lb = [2e-6, 0]
 
-ub=[100]
+ub=[0.5, 100]
 
 counter = 0
 
-configure_experiment_run("fixed_tol_numIter/RMSE_test4_VNS_on")
+configure_experiment_run("tol_and_padSize/RMSE_test1")
 best_obj_value = float('inf')
 load_groun_truth_data()
 

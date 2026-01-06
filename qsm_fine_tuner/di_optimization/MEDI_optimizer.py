@@ -8,7 +8,8 @@ import sys
 import json
 import time  
 
-def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, lmbda, percentage, radius=3):
+def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, lmbda, percentage, radius=1):
+    # Radius is by default set to 1, explanation on SMV_MERIT_OFF 
     eng = matlab.engine.start_matlab()
 
     sepia_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
@@ -67,7 +68,7 @@ def configure_experiment_run(test_fn):
     print("GM and WM masks loaded successfully.")
     # For each new run, the iter folder and the txt_file_path must be pointing to the same folder,
     # Because we check if its created and not empty, if it is not, we create it.
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\sus_mapping_opt\iter_MEDI/smv_on_merit_off/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_60\iter_MEDI\smv_1_merit_off\{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -76,7 +77,7 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\sus_mapping_opt/iter_MEDI/smv_on_merit_off/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_60\iter_MEDI\smv_1_merit_off\{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
 
@@ -94,14 +95,14 @@ def load_groun_truth_chidist_data():
     #chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
     # Or load the already referenced map
 
-    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
+    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\di_gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
 
     print("Ground truth susceptibility map loaded")
 
 def log_best_solution(obj_value, iteration, lmbda, percentage, gm_rmse, wm_rmse, radius = None):
     global best_obj_value
-    if radius is None:
-        radius = "SMV OFF"
+    if radius is None or radius == 1:
+        radius = "1 (heuristic for SMV OFF)"
 
     total_rmse = gm_rmse + wm_rmse
     if obj_value <= best_obj_value:
@@ -124,6 +125,8 @@ def MEDI_SMV_OFF_optimizer(x):
     # lammbda, percentage, radius
     lmbda = x.get_coord(0)
     percentage = x.get_coord(1)
+    smv_radius = 1  # SMV OFF, we select 1 because it is the lowest value and through SHARP method analysis with the phantom it gives better results
+    # Bigger SMV values will underperform because of the small FOV in Z direction
     
     iteration_fn = f"MEDI_run{counter}/"
 
@@ -135,23 +138,29 @@ def MEDI_SMV_OFF_optimizer(x):
     
     print("Output FN used:", output_fn)
 
-    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz")
+    # Using GT Local Field as input, test with the LF with different SNR levels, start at 60, test at 20 and 100 and look for convergence
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\noisy\cropped\di_in_gt_ref_avg_sc_lf_Hz_snr60_crop.nii.gz") 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
-    sepia_weights_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\masks\qsm_processing_msk_crop.nii.gz")
+    sepia_weights_path = mask_filename
     
-    in1 = best_local_field_path
+    in1 = gt_local_field_path
     in2 = gauss_sim_ideal_mag_path 
     in3 = sepia_weights_path
     in4 = custom_header_path
 
-    create_chimap(in1, in2, in3, in4, output_fn, mask_filename, lmbda, percentage)
+    # This if statement is in case someone defines SMV with a different value than 1 (the default)
+    if smv_radius != 1:
+        create_chimap(in1, in2, in3, in4, output_fn, mask_filename, lmbda, percentage, radius=smv_radius)
+    else:
+        create_chimap(in1, in2, in3, in4, output_fn, mask_filename, lmbda, percentage)
+
     # Import local field for RMSE calculation
     new_chimap_path = os.path.join(iter_folder,iteration_fn + "Sepia_chimap.nii.gz")
     
@@ -192,13 +201,10 @@ def MEDI_SMV_OFF_optimizer(x):
     #wm_mean = np.mean(local_field_data[wm_mask_data == 1])
     #print("WM_mean: ", wm_mean)
 
-    # Increase counter
-    counter += 1
-
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, lmbda, percentage, gm_rmse, wm_rmse, radius = 3)
+    log_best_solution(objective_value, counter, lmbda, percentage, gm_rmse, wm_rmse, radius=smv_radius)
 
     print(f"Iter {counter}: Lambda = {lmbda}, Percentage = {percentage}, GM+WM RMSE = {objective_value}")
 
@@ -212,6 +218,10 @@ def MEDI_SMV_OFF_optimizer(x):
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
     }
+    
+    # Increase counter
+    counter += 1
+
     # We want this to be saved in the precie run so:
     json_filename = os.path.join(iter_folder, iteration_fn, "sidecar_data.json")
     with open(json_filename, 'w') as json_file:
@@ -242,21 +252,20 @@ def MEDI_SMV_ON_optimizer(x):
         print("Created folder for new iteration #",counter)
     
     print("Output FN used:", output_fn)
-    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz")
+
+    # Using GT Local Field as input, test with the LF with different SNR levels, start at 60, test at 20 and 100 and look for convergence
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\noisy\cropped\di_in_gt_ref_avg_sc_lf_Hz_snr60_crop.nii.gz") 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
-
-    #gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\July_2025\mrsim_outputs\custom_params\MEDI_custom_gauss_crop_sim_mag_pro.nii.gz")
-    
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
-    in1 = best_local_field_path
+    in1 = gt_local_field_path
     in2 = gauss_sim_ideal_mag_path 
     in3 = sepia_weights_path
     in4 = custom_header_path
@@ -320,6 +329,10 @@ def MEDI_SMV_ON_optimizer(x):
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
     }
+
+    # Increase counter
+    counter += 1
+
     # We want this to be saved in the precie run so:
     json_filename = os.path.join(iter_folder, iteration_fn, "sidecar_data.json")
     with open(json_filename, 'w') as json_file:
@@ -335,10 +348,10 @@ def MEDI_SMV_ON_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 3", 
-    "BB_INPUT_TYPE (R R I)",
+    "DIMENSION 2", 
+    "BB_INPUT_TYPE (R I)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 1000",
+    "MAX_BB_EVAL 400",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -354,19 +367,19 @@ nomad_params = [
 # When disabling SMV, the radius is not used and we can find the optimized parameters for the other two
 # Begin:
 start_time = time.time()
-x0 = [2500, 70, 2] # Recommended by SEPIA is 1000 and 90, but based on understanding of our FOV and the algorithm, we should try lower percentage, lambda is to be tested
+x0 = [1000, 90] # Recommended by SEPIA is 1000 and 90, but based on understanding of our FOV and the algorithm, we should try lower percentage, lambda is to be tested
 
-lb = [0.001, 20, 1]
+lb = [0.001, 20]
 
-ub = [2600, 75, 3]
+ub = [10000, 99]
 
 counter = 0
 
-configure_experiment_run("RMSE_in_gt_lf_tst3")
+configure_experiment_run("RMSE_test1_VNS_ON")
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
-result = nomad.optimize(MEDI_SMV_ON_optimizer, x0, lb, ub, nomad_params)
+result = nomad.optimize(MEDI_SMV_OFF_optimizer, x0, lb, ub, nomad_params)
 # We use SMV_OFF optimizer because the radius must be fixed based on the acquisition parameters and the FOV, so we do not optimize it
 # For the simulations, SMV radius is set to 3, we'll fix it to that and just test lambda and percentage
 

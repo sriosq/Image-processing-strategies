@@ -59,7 +59,7 @@ def configure_experiment_run(test_fn):
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\sus_mapping_opt\iter_iLSQR/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_60\iter_iLSQR/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -68,7 +68,7 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\sus_mapping_opt\iter_iLSQR/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_60\iter_iLSQR/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
 
@@ -86,7 +86,7 @@ def load_groun_truth_chidist_data():
     #chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
     # Or load the already referenced map
 
-    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
+    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\di_gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
 
     print("Ground truth susceptibility map loaded")
 
@@ -126,18 +126,18 @@ def iLSQR_optimizer(x):
     
     print("Output FN used:", output_fn)
 
-    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz") 
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\noisy\cropped\di_in_gt_ref_avg_sc_lf_Hz_snr60_crop.nii.gz") 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
-    in1 = best_local_field_path
+    in1 = gt_local_field_path
     in2 = gauss_sim_ideal_mag_path 
     in3 = sepia_weights_path
     in4 = custom_header_path
@@ -183,9 +183,6 @@ def iLSQR_optimizer(x):
     #wm_mean = np.mean(local_field_data[wm_mask_data == 1])
     #print("WM_mean: ", wm_mean)
 
-    # Increase counter
-    counter += 1
-
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
@@ -203,6 +200,10 @@ def iLSQR_optimizer(x):
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
     }
+
+    # Increase counter
+    counter += 1
+
     # We want this to be saved in the precie run so:
     json_filename = os.path.join(iter_folder, iteration_fn, "sidecar_data.json")
     with open(json_filename, 'w') as json_file:
@@ -237,11 +238,11 @@ x0 = [0.001, 100, 0.13] # Recommended by SEPIA (for brain)
 
 lb = [0.00000001, 20, 0.00001]
 
-ub = [0.1, 1000, 0.5]
+ub = [0.1, 400, 0.5]
 
 counter = 0
 
-configure_experiment_run("RMSE_in_gt_lf_tst1")
+configure_experiment_run("RMSE_test1_VNS_ON")
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 

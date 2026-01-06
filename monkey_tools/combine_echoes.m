@@ -2,13 +2,13 @@
 % Make sure you copy all the echoes correctly!
 % Important to not get ME data with repeated echoes!
 
-echo1_swiss = "NS_V_S22_e1_stacked_ph.nii.gz";
-echo2_swiss = "NS_V_S22_e2_stacked_ph.nii.gz";
-echo3_swiss = "NS_V_S22_e3_stacked_ph.nii.gz";
-echo4_swiss = "NS_V_S22_e4_stacked_ph.nii.gz";
-echo5_swiss = "NS_V_S22_e5_stacked_ph.nii.gz";
+echo1_swiss = "T20250625121020_NS_V_S18_i00001_ph.nii";
+echo2_swiss = "T20250625121020_NS_V_S18_e2_i00001_ph.nii";
+echo3_swiss = "T20250625121020_NS_V_S18_e3_i00001_ph.nii";
+echo4_swiss = "T20250625121020_NS_V_S18_e4_i00001_ph.nii";
+echo5_swiss = "T20250625121020_NS_V_S18_e5_i00001_ph.nii";
 
-fn = 'concatenated_echoes/NS_V_S22_ph';
+fn = 'slabs_alone_concat_echoes/NS_V_S18_phs';
 
 % Read the NIfTI images and their header info
 info_echo1 = niftiinfo(echo1_swiss);

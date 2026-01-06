@@ -60,7 +60,7 @@ def configure_experiment_run(test_fn):
 
     print("GM and WM masks loaded successfully.")
 
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params/bgfr_opt\iter_SHARP/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_SHARP/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -69,13 +69,13 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params/bgfr_opt\iter_SHARP/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_SHARP/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
   
 def load_groun_truth_data():
     global wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data
-    wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
+    wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
 
 def log_best_solution(obj_value, iteration, radius, thr, gm_rmse, wm_rmse):
@@ -113,10 +113,10 @@ def sharp_optimizer(x):
     print("Output FN used:", output_fn)
 
     #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\fm_tests\test1_simple\B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_74\fm_tests\test1_simple\B0.nii")
     # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\qsm_processing_msk_crop.nii.gz")
     
     in1 = custom_fm_path
     in2 = ""
@@ -163,8 +163,6 @@ def sharp_optimizer(x):
     #print("GM_mean: ", gm_mean)
     #wm_mean = np.mean(local_field_data[wm_mask_data == 1])
     #print("WM_mean: ", wm_mean)
-    # Increase counter
-    counter += 1
 
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
@@ -182,6 +180,10 @@ def sharp_optimizer(x):
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
     }
+
+    # Increase counter
+    counter += 1
+
     # We want this to be saved in the precie run so:
     json_filename = os.path.join(iter_folder, iteration_fn, "sidecar_data.json")
     with open(json_filename, 'w') as json_file:
@@ -199,7 +201,7 @@ nomad_params = [
     "DIMENSION 2",
     "BB_INPUT_TYPE (I R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 100",
+    "MAX_BB_EVAL 120",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",

@@ -7,8 +7,8 @@ import numpy as np
 import sys
 import json
 import time
-
-def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, radius, alpha):
+from utils.static_methods import log_best_solution
+def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, radius, thr):
     eng = matlab.engine.start_matlab()
 
     sepia_path = "R:/Poly_MSc_Code/libraries_and_toolboxes/sepia"
@@ -25,10 +25,10 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, radi
     medi_sama = eng.genpath(path_to_MEDI_tb)
     eng.addpath(medi_sama, nargout = 0)
 
-    #  RESHARP parameters
+    # SHARP parameters
     rad = radius
-    reg_parameter = alpha # regularization parameter
-    method = "RESHARP"
+    threshold = thr # regularization parameter
+    method = "SHARP"
 
     bfr_params = {
     
@@ -44,12 +44,11 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, radi
     'erode_radius': 0,
     'erode_before_radius': 0,
     'radius':rad,
-    'alpha': reg_parameter}
+    'threshold': threshold}
     }   
 
     eng.python_wrapper(in1, in2, in3, in4 , method, output_basename, mask_filename, bfr_params, nargout = 0)
     print("Local Field Created! Calculate metrics and update parameters!")
-
 
 def configure_experiment_run(test_fn):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
@@ -61,7 +60,7 @@ def configure_experiment_run(test_fn):
 
     print("GM and WM masks loaded successfully.")
 
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_resharp/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_SHARP/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -70,40 +69,40 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_resharp/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params/bgfr_opt\iter_SHARP/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         file.write("Optimization results.\n")
-
+  
 def load_groun_truth_data():
     global wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data
-    wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
+    wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
 
-def log_best_solution(obj_value, iteration, radius, alpha, gm_rmse, wm_rmse):
+def log_best_solution(obj_value, iteration, radius, thr, gm_rmse, wm_rmse):
     global best_obj_value
     total_rmse = gm_rmse + wm_rmse
     if obj_value <= best_obj_value:
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"Iteration: {iteration}: OBJ {obj_value} // SMV radius: {radius}, Reg. Param aplha: {alpha}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                file.write(f"Iteration: {iteration}: OBJ {obj_value} // SMV radius: {radius}, Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"Iteration: {iteration}: OBJ {obj_value} // SMV radius: {radius}, Reg. Param aplha: {alpha}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+            file.write(f"Iteration: {iteration}: OBJ {obj_value} // SMV radius: {radius}, Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
 
-def resharp_optimizer(x):
+def sharp_optimizer(x):
     global counter
 
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
 
     radius = x.get_coord(0)
-    alpha = x.get_coord(1)
+    thr = x.get_coord(1)
 
-    iteration_fn = f"resharp_run{counter}/"
+    iteration_fn = f"sharp_run{counter}/"
 
     output_fn = str(os.path.join(iter_folder,iteration_fn+"Sepia"))
 
@@ -114,17 +113,17 @@ def resharp_optimizer(x):
     print("Output FN used:", output_fn)
 
     #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_74\fm_tests\test1_simple\B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\fm_tests\test1_simple\B0.nii")
     # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\qsm_processing_msk_crop.nii.gz")
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
     
     in1 = custom_fm_path
     in2 = ""
     in3 = ""
     in4 = custom_header_path
 
-    create_local_field(in1, in2, in3, in4, output_fn, mask_filename, radius, alpha)
+    create_local_field(in1, in2, in3, in4, output_fn, mask_filename, radius, thr)
     # Import local field for RMSE calculation
     new_local_field_path = os.path.join(iter_folder,iteration_fn + "Sepia_localfield.nii.gz")
     
@@ -164,28 +163,25 @@ def resharp_optimizer(x):
     #print("GM_mean: ", gm_mean)
     #wm_mean = np.mean(local_field_data[wm_mask_data == 1])
     #print("WM_mean: ", wm_mean)
+    # Increase counter
+    counter += 1
 
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
     objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, radius, alpha, gm_rmse, wm_rmse)
+    log_best_solution(objective_value, counter, radius, thr, gm_rmse, wm_rmse)
 
-    print(f"Iter {counter}: SMV Radius ={radius}, Regularization parameter: {alpha} GM+WM RMSE={objective_value}")
-
+    print(f"Iter {counter}: Radius: {radius}, Threshold: {thr}, GM+WM RMSE = {objective_value}")
 
     # Data to save
     sidecar_data = {
         'iteration': counter,
-        'Radius' : float(radius),
-        'Regularization_parameter': float(alpha),
+        'SMV Radius' : float(radius),
+        'Threshold': float(thr),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
         'objective_value': float(objective_value)
     }
-
-    # Increase counter
-    counter += 1
-
     # We want this to be saved in the precie run so:
     json_filename = os.path.join(iter_folder, iteration_fn, "sidecar_data.json")
     with open(json_filename, 'w') as json_file:
@@ -203,26 +199,26 @@ nomad_params = [
     "DIMENSION 2",
     "BB_INPUT_TYPE (I R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 200",
+    "MAX_BB_EVAL 100",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
-    "DISPLAY_STATS BBE OBJ",    
+    "DISPLAY_STATS BBE OBJ",
     "VNS_MADS_SEARCH true", # Optional Variable Neighborhood Search
     "VNS_MADS_SEARCH_TRIGGER 0.75" # Max desired ration of VNS BBevals over the total number of BBevals
-
 ]
-# For resharp the x0 should be [SMV radius (in voxels), regularization parameter]
+# For sharp the x0 should be [SMV radius (in voxels), threshold]
 # From the code we can see that a good starting point can be calculated from the voxel size
 # round(6/max(voxel_size)) * max(voxel_size)
 # The selection of the number 6 may be related to the brain imaging scenario, where the voxel size is usually around 1mm?
 # For the spinal cord I we could think of using lower values, but we need to test this hence selecting a range of values between 1 and 12 
+# The threshold parameter is to truncate k-space data, in the code it defaults to 0 but SEPIA defaults to 0.03
 # Begin:
 start_time = time.time()
-x0 = [4, 0.01] # Recommended by SEPIA (for brain)
+x0 = [4, 0.03] # Recommended by SEPIA (for brain)
 
-lb = [1, 2e-6]
+lb = [1, 0]
 
-ub=[5, 5e-2]
+ub=[12, 0.1]
 
 counter = 0
 
@@ -230,7 +226,7 @@ configure_experiment_run("RMSE_test1_VNS_ON")
 best_obj_value = float('inf')
 load_groun_truth_data()
 
-result = nomad.optimize(resharp_optimizer, x0, lb, ub, nomad_params)
+result = nomad.optimize(sharp_optimizer, x0, lb, ub, nomad_params)
 
 fmt = ["{} = {}".format(n,v) for (n,v) in result.items()]
 output = "\n".join(fmt)
