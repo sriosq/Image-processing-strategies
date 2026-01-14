@@ -46,7 +46,7 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, lmbda, pe
     'wData': 1,
     'percentage': percentage,
     'zeropad': zeropad_size,
-    'isSMV': 1,
+    'isSMV': 0,
     'radius': radius,
     'merit': 0,
     'isLambdaCSF': 0,
@@ -58,7 +58,7 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, lmbda, pe
     print("Chi map! Calculate metrics and update parameters!")
 
 
-def configure_experiment_run(test_fn):
+def configure_experiment_run(test_fn, first_line="Optimization results: "):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
@@ -68,7 +68,7 @@ def configure_experiment_run(test_fn):
     print("GM and WM masks loaded successfully.")
     # For each new run, the iter folder and the txt_file_path must be pointing to the same folder,
     # Because we check if its created and not empty, if it is not, we create it.
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_60\iter_MEDI\smv_1_merit_off\{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_60\iter_MEDI\smv_off_merit_off\{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -77,9 +77,10 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_60\iter_MEDI\smv_1_merit_off\{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_60\iter_MEDI\smv_off_merit_off\{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
-        file.write("Optimization results.\n")
+        first_line_txt =  first_line + "\n"
+        file.write(first_line_txt)
 
 def load_groun_truth_chidist_data():
     global chimap_ref_sc_avg_
@@ -143,7 +144,7 @@ def MEDI_SMV_OFF_optimizer(x):
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
     gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74\gauss_crop_sim_mag_pro.nii.gz")
@@ -375,7 +376,7 @@ ub = [10000, 99]
 
 counter = 0
 
-configure_experiment_run("RMSE_test1_VNS_ON")
+configure_experiment_run("RMSE_test1_onlySCmsk", first_line="Optimization results for MEDI optimizer with SMV & Merit OFF, GT LF input, SNR 60, only SC mask:")
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 

@@ -105,7 +105,7 @@ def pdf_optimizer(x):
     #voxelSize = [0.976562, 0.976562, 2.344]
 
     tolerance = x.get_coord(0)
-    num_iters = 250
+    num_iters = 50
     padSize = x.get_coord(1)
     
     iteration_fn = f"pdf_run{counter}/"
@@ -208,7 +208,7 @@ nomad_params = [
     "DIMENSION 2",
     "BB_INPUT_TYPE (R I)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 100",
+    "MAX_BB_EVAL 10",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -230,7 +230,7 @@ ub=[0.5, 100]
 
 counter = 0
 
-configure_experiment_run("tol_and_padSize/RMSE_test1")
+configure_experiment_run("tol_and_padSize/RMSE_test2_50_iters")
 best_obj_value = float('inf')
 load_groun_truth_data()
 

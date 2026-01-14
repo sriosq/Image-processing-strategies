@@ -50,7 +50,7 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, tol, maxi
     print("Chi map! Calculate metrics and update parameters!")
 
 
-def configure_experiment_run(test_fn):
+def configure_experiment_run(test_fn, first_line="Optimization results: "):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
@@ -69,8 +69,10 @@ def configure_experiment_run(test_fn):
         print("Experiment folder created!")
 
     txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_60\iter_iLSQR/{test_fn}.txt"
+
     with open(txt_file_path, 'w') as file:
-        file.write("Optimization results.\n")
+        first_line_txt =  first_line + "\n"
+        file.write(first_line_txt)
 
 def load_groun_truth_chidist_data():
     global chimap_ref_sc_avg_
@@ -130,7 +132,7 @@ def iLSQR_optimizer(x):
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
     gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74\gauss_crop_sim_mag_pro.nii.gz")
@@ -242,7 +244,7 @@ ub = [0.1, 400, 0.5]
 
 counter = 0
 
-configure_experiment_run("RMSE_test1_VNS_ON")
+configure_experiment_run("RMSE_test2_onlySCmsk", first_line="Optimization results for iLSQR optimizer, GT LF input, SNR 60, only SC mask:")
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 

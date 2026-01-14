@@ -53,7 +53,7 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, tol, maxi
     'solver': solver,
     'constraint': constraint,   
     'gradient_mode': gmode,
-    'isGPU': '0',
+    'isGPU': 0,
     'isWeakHarmonic': isWeakHarmonic,
     'beta': beta, # Harmonic constraint
     'muh': muh # Harmonic consistency
@@ -65,7 +65,7 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, tol, maxi
     print("Chi map! Calculate metrics and update parameters!")
 
 
-def configure_experiment_run(test_fn, first_line):
+def configure_experiment_run(test_fn, first_line="Optimization results: "):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
@@ -74,7 +74,7 @@ def configure_experiment_run(test_fn, first_line):
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\sus_mapping_opt/iter_FANSI/weakH_off/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt/snr_60/iter_FANSI/weakH_off/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -83,9 +83,10 @@ def configure_experiment_run(test_fn, first_line):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\sus_mapping_opt/iter_FANSI/weakH_off/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt/snr_60/iter_FANSI/weakH_off/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
-        file.write(f"{first_line} \n")
+        first_line_txt =  first_line + "\n"
+        file.write(first_line_txt)
 
 def load_groun_truth_chidist_data():
     global chimap_ref_sc_avg_
@@ -101,7 +102,7 @@ def load_groun_truth_chidist_data():
     #chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
     # Or load the already referenced map
 
-    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
+    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\di_gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
 
     print("Ground truth susceptibility map loaded")
 
@@ -128,14 +129,19 @@ def FANSI_optimizer_weakH_off(x):
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
     # 
-    tol = 0.05
-    maxiter = 300
-    lmbda = x.get_coord(0) # alpha is lambda1, this is how SEPIA handles it, I will submit a change to their repo becuase its confusing
-    mu1 = 100*lmbda # Gradient consistency
-    mu2 = 1 # Fidelity consistency
+    # In the FANSI code, we find some relationships between parameters:
+    # Magnitude recommended for non-linear solver (we are using non-linear, so magnitude is preferred)
+    # alpha1 2e-4
+    # alpha0 = 2*alpha1 recommended
+
+    tol = 0.1 # Tolerance default is 0.1, heuristic definition 0.05
+    maxiter = 150 # Default is 150, extended to 300 for better convergence
+    lmbda = x.get_coord(0) # lambda is Gradient L1 penalty, this is how SEPIA handles it, I will submit a change to their repo cos its confusing
+    mu1 = x.get_coord(1) # Gradient consistency
+    mu2 = 1 # Fidelity consistency and should remain 1 - this just uses the magnitude
     solver = 'Non-linear'  # 'Non-linear' or 'Linear', we fix to non-linear
     constraint = 'TV'  # 'TGV' or 'TV', we fix to TV
-    gmode = 'L2'  # 'Vector field', 'L1', 'L2',  or 'None' 
+    gmode = 'L1'  # 'Vector field', 'L1', 'L2',  or 'None' 
     # Test and assess diffenrent gradient modes both in-vivo and in-sillico
 
     # First we do with weak harmonic off, phantom shouldn't need weak ON?
@@ -154,17 +160,19 @@ def FANSI_optimizer_weakH_off(x):
         print("Created folder for new iteration #",counter)
     
     print("Output FN used:", output_fn)
-    # Best local field is using SHARP!
-    best_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz") 
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs/custom_params\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
+
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\noisy\cropped\di_in_gt_ref_avg_sc_lf_Hz_snr60_crop.nii.gz") 
+    # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
+    # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
+    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\August_2025\mrsim_outputs\custom_params\gauss_crop_sim_mag_pro.nii.gz")
-    # Some algorithms need weigths for noise distribution
-    sepia_weights_path = ""
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74\gauss_crop_sim_mag_pro.nii.gz")
+    # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
+    sepia_weights_path = mask_filename
     
-    in1 = best_local_field_path
+    in1 = gt_local_field_path
     in2 = gauss_sim_ideal_mag_path 
     in3 = sepia_weights_path
     in4 = custom_header_path
@@ -257,10 +265,10 @@ def FANSI_optimizer_weakH_off(x):
 #############################################################################################################################################
 
 nomad_params_weak_OFF = [
-    "DIMENSION 1",
-    "BB_INPUT_TYPE (R)", # lmbda, mu1, mu2, beta and muh
+    "DIMENSION 2",
+    "BB_INPUT_TYPE (R R)", # lmbda, mu1, mu2, beta and muh
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 100",
+    "MAX_BB_EVAL 10",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
@@ -289,11 +297,11 @@ nomad_params_weak_ON = [
 # Begin:
 start_time = time.time()
 # Parameters are: [lmbda, mu1, mu2, beta, muh] beta and muh are only used if isWeakHarmonic = 1
-x0_weakOFF = [0.0002] # Recommended by SEPIA (for brain)
+x0_weakOFF = [0.0002, 0.02] # Recommended by SEPIA (for brain)
 
-lb_weakOFF = [0.0000001]
+lb_weakOFF = [0.0000001, 0.0000002]
 
-ub_weakOFF = [0.1]
+ub_weakOFF = [0.1, 20]
 
 ######################################################################################
 x0_weakON = [0.0002, 0.02, 1, 150, 3] # Recommended by SEPIA (for brain)
@@ -334,8 +342,11 @@ counter = 0
 # XXIII_non-linear_TV_vector_field_weakH_on
 # XXIV_linear_TV_vector_field_weakH_on
 
-first_line = "Optimization results for FANSI, Non-Linear TV L2, weak harmonics OFF:"
-configure_experiment_run("heuristic_non-linear_TV_L2_weakH_on/test1", first_line)
+# After careful consideration and testing, we decide to use only Non-Linear solver
+# And begin with using TV 
+
+first_line = "Optimization results for FANSI @60 SNR, Non-Linear TV L1, weak harmonics OFF:"
+configure_experiment_run("heuristic_nL_TV_L1_weakH_off/test2_for_def_rmse", first_line)
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 

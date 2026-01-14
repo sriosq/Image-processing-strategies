@@ -60,3 +60,53 @@ def extract_metrics(path_to_local_field, path_to_mask, path_to_vert_levels, path
 
 # Call the function
 #extract_metrics(path_to_demod_b0, path_to_sc_seg, path_to_vert_levels, path_to_output, method='wa', vert="2:14")
+
+
+# Extract the WM and GM values for each dataset
+def extract_values_per_vertebrae(input_data, mask, vertfile, participant_id, tissue, statistic="mean"):
+    '''
+    Extract values per vertebrae level for a given tissue type
+
+    Parameters:
+    input_data (numpy.ndarray): Input data from which to extract values (e.g., local field data)
+    mask (numpy.ndarray): Binary mask for the region of interest to where values are calculated (e.g., WM or GM) 
+    vertfile (numpy.ndarray): Vertebrae level mask to separate values by vertebrae
+    participant_id (str): Participant identifier for record purposes
+    tissue (str): Tissue type for record purposes (e.g., 'WM' or 'GM')
+    
+    '''
+
+    records = []
+    vertebrae = np.unique(vertfile) # Get the number of verebrae
+    vertebrae = vertebrae[vertebrae > 0]  # remove background
+
+    for v in vertebrae:
+        print(f"Calculating for vertebrae: {v}")
+        idx = (vertfile == v) & (mask > 0) # Create the indexes for the specific vertebrae
+        values = input_data[idx]
+
+        if values.size == 0:
+            continue  # Skip if no values found for this vertebrae
+
+        if statistic == "mean":
+            summary_value = np.mean(values)
+            print(f"Mean value for vertebrae {v}, tissue {tissue}: {summary_value}")
+        
+        elif statistic == "median":
+            summary_value = np.median(values)
+            print(f"Median value for vertebrae {v}, tissue {tissue}: {summary_value}")
+        else:
+            raise ValueError("Statistic not recognized. Use 'mean' or 'median'.")
+
+
+        records.append({
+            'Participant_ID': participant_id,
+            'Vertebrae': int(v),
+            'Tissue': tissue,
+            'Value': summary_value,
+            'Nvoxels': values.size
+        })
+
+    print(f"Total records extracted for {tissue}: {len(records)}")
+
+    return records
