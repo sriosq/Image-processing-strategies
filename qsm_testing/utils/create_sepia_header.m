@@ -1,17 +1,17 @@
 %%% Code for creating a Header file (maybe later automatically done in
 %%% converter). Needed for QSM PIPELINE testing with SEPIA
-%%% Whole body is axially 512 isotropic and then it gets cropped
-%%% Initially it's 828
+% Remember that Sepia expects echo times in seconds
 
+%%% Whole body cropped (Initially it's 828 long)
 B0 = 3; % Magnetic Field Strength in Tesla
 B0_dir = [0;0;1]; % Direction of B0
 CF = 127740000; % Central Frequency
 %TE = [0.001, 0.002, 0.003, 0.004, 0.005, 0.010, 0.015, 0.020, 0.030,
-%0.040]; % For Weird Tes
+%0.040]; % I call this our custom TEs
 TE = [0.004, 0.008, 0.012, 0.016, 0.020, 0.024]; % For more realistic TEs
 % Echo time or list of echo times
-matrixSize = [101, 171, 141]; % The "dimensions" of the image used
-voxelSize = [0.9766, 0.9766, 2.344]; % Pixdim 
+matrixSize = [101, 171, 141]; % The FOV of the image used
+voxelSize = [0.9766, 0.9766, 2.344]; % Voxel size 
 outpath = "E:/msc_data/sc_qsm/data/wb/simulation/header_qsm_tsting_hcrop2.mat";
 outpath2 = "E:/msc_data/sc_qsm/data/cropped/piece-wise/simulation/TE_1_weird_40/header_qsm_tsting_hcrop2.mat";
 outpath3 = "E:/msc_data/sc_qsm/data/cropped/piece-wise/simulation/TE_4_4_24/header_qsm_tsting_hcrop2.mat";
@@ -174,6 +174,19 @@ matrixSize = [272, 272, 16]; % The "dimensions" of the image used
 voxelSize = [0.625, 0.625, 5]; % Pixdim 
 
 save("chi_003_m6_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+
+%% Header for chi_004, we have 3 acq. protocols:
+% for m1, 2 &3 all have same echo train: [0.00693, 0.01185, 0.01685, 0.02185, 0.02685], 
+% matrixSize = [384, 384, 16], voxelSize = [0.4427, 0.4427, 5]
+
+TE = [0.00693, 0.01185, 0.01685, 0.02185, 0.02685];
+B0 = 3;
+B0_dir = [0;0;1];
+CF = 123249367; % In Hz, B0 * gyromagnetic ratio 123.249367 127740000
+matrixSize = [384, 384, 16]; % The "dimensions" of the image used
+voxelSize = [0.4427, 0.4427, 5]; % Pixdim 
+
+save("chi_004_m1_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
 %% Header for Swiss 7T 
 % 

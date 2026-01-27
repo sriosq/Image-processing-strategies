@@ -110,3 +110,79 @@ def extract_values_per_vertebrae(input_data, mask, vertfile, participant_id, tis
     print(f"Total records extracted for {tissue}: {len(records)}")
 
     return records
+
+def chimap_comp_wm_gm_custom(dub, meas, root_dir, test_folders, gm_msk_path, wm_msk_path):
+    compare_chimap_rows = []
+
+    for algo in test_folders:
+
+        chimap_map_path = os.path.join(root_dir, algo, "Sepia_Chimap.nii.gz")
+        
+        if chimap_map_path is None or not os.path.exists(chimap_map_path):
+            print(f"Chi map not found for {algo}, skipping...")
+            continue
+        
+        chimap_img = nib.load(chimap_map_path)
+        chimap_data = chimap_img.get_fdata()
+
+        gm_msk_data = nib.load(gm_msk_path).get_fdata()
+        wm_msk_data = nib.load(wm_msk_path).get_fdata()
+
+        gm_vals = chimap_data[(gm_msk_data == 1 ) & (chimap_data != 0)].ravel()
+        wm_vals = chimap_data[(wm_msk_data == 1 ) & (chimap_data != 0)].ravel()
+
+        # Calculate total voxel count
+        total_vox_gm = np.sum(gm_msk_data == 1)
+        total_vox_wm = np.sum(wm_msk_data == 1)
+        
+        # Compute metrics for GM and WM
+        gm_mean = np.mean(gm_vals)
+        gm_std = np.std(chimap_data[gm_msk_data == 1])
+        
+        wm_mean = np.mean(wm_vals)
+        wm_std = np.std(chimap_data[wm_msk_data == 1])
+        
+        # Calculate how many voxels are in the mask
+        gm_nonzero_vox = np.sum(chimap_data[gm_msk_data==1] != 0)
+        wm_nonzero_vox = np.sum(chimap_data[wm_msk_data==1] != 0)
+
+        contrast = np.abs(gm_mean - wm_mean) # Subtract wm from gm because wm should be negative
+        # This way, if WM is not negative we get a negative contrast which is bad!
+
+        denominator = np.sqrt(gm_std**2 + wm_std**2)
+
+        raw_metric = contrast / denominator if denominator != 0 else 0 # Just in case that the std is 0 - to avoid division by zero
+
+        gm_penalty = gm_nonzero_vox / total_vox_gm if total_vox_gm != 0 else 0
+        wm_penalty = wm_nonzero_vox / total_vox_wm if total_vox_wm != 0 else 0
+
+        # Final metric
+        final_metric = raw_metric * gm_penalty * wm_penalty 
+
+                    # Now collect row and add to data frame
+        compare_chimap_rows.append({
+                'subject': dub,
+                'measurement': meas,
+                'test_folder': algo,
+
+                'mean_gm': gm_mean,
+                'std_gm': gm_std,
+                'total_vox_gm': total_vox_gm,
+                'nonzero_vox_gm': gm_nonzero_vox,
+                'gm_penality': gm_penalty,
+
+                'mean_wm': wm_mean,
+                'std_wm': wm_std,
+                'total_vox_wm': total_vox_wm,
+                'nonzero_vox_wm': wm_nonzero_vox,
+                'wm_penality': wm_penalty,
+    
+                'contrast_factor': contrast,
+                'std_denominator': denominator,
+                #'raw_metric': raw_metric,
+                
+                'final_metric': final_metric
+                })
+        
+        df = pd.DataFrame(compare_chimap_rows)
+    return df
