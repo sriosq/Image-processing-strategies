@@ -47,8 +47,10 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, thr):
     print("Chi map Created! Calculate metrics and update parameters!")
 
 
-def configure_experiment_run(test_fn, first_line="Optimization results: "):
-    global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
+def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda = 1.5):
+    global gm_mask_data, wm_mask_data, iter_folder, txt_file_path, lambda_noise
+
+    lambda_noise = lmbda
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
 
@@ -87,20 +89,20 @@ def load_groun_truth_chidist_data():
 
     print("Ground truth susceptibility map loaded")
 
-def log_best_solution(obj_value, iteration, thr, gm_rmse, wm_rmse):
+def log_best_solution(obj_value, iteration, thr, gm_rmse, wm_rmse, noise_penalty):
     global best_obj_value
     total_rmse = gm_rmse + wm_rmse
     if obj_value <= best_obj_value:
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"Iteration: {iteration}: OBJ {obj_value} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                file.write(f"Iteration: {iteration}: noisy_OBJ {obj_value} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} | noise penalty: {noise_penalty} \n")
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+            file.write(f"Iteration: {iteration}: noisy_OBJ {obj_value} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} | noise penalty: {noise_penalty} \n")
 
 
 def tkd_optimizer(x):
@@ -129,7 +131,7 @@ def tkd_optimizer(x):
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_100\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
@@ -181,10 +183,17 @@ def tkd_optimizer(x):
 
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
-    objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, thr, gm_rmse, wm_rmse)
 
-    print(f"Iter {counter}: Threshold={thr}, GM+WM RMSE = {objective_value}")
+    objective_rmse = gm_rmse + wm_rmse
+    noise_penalty = lambda_noise * (gm_std_diff + wm_std_diff)
+
+    noise_penalty_obj = objective_rmse + noise_penalty
+
+
+    log_best_solution(noise_penalty_obj, counter, thr, gm_rmse, wm_rmse, noise_penalty)
+
+
+    print(f"Iter {counter}: Threshold={thr}, noise penalized GM+WM RMSE = {noise_penalty_obj}")
 
     # Data to save
     sidecar_data = {
@@ -192,7 +201,8 @@ def tkd_optimizer(x):
         'threshold': float(thr),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
-        'objective_value': float(objective_value)
+        'noise_penalty': float(noise_penalty),
+        'noisy_objective_value': float(noise_penalty_obj)
     }
 
     
@@ -205,7 +215,7 @@ def tkd_optimizer(x):
         json.dump(sidecar_data, json_file, indent=4)
     print("Sidecar data saved to:", json_filename)
 
-    rawBBO = str(objective_value)
+    rawBBO = str(noise_penalty_obj)
     x.setBBO(rawBBO.encode("UTF-8"))
 
     return 1
@@ -216,7 +226,7 @@ nomad_params = [
     "DIMENSION 1",
     "BB_INPUT_TYPE (R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 20",
+    "MAX_BB_EVAL 200",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -229,7 +239,7 @@ nomad_params = [
 # Lower value may retain more details but increase noise
 # Begin:
 start_time = time.time()
-x0 = [0.01] # Recommended by SEPIA (for brain)
+x0 = [0.015] # Recommended by SEPIA (for brain)
 
 lb = [0.00001]
 
@@ -237,8 +247,9 @@ ub = [0.6]
 
 counter = 0
 
-configure_experiment_run("RMSE_test3_onlySCmsk", first_line="Optimization results for TKD optimizer, GT LF input, SNR 60, only SC mask:")
+configure_experiment_run("noise_lambda1/RMSE_test_new_strategy", first_line="Optimization results for TKD optimizer, GT LF input, SNR 60, only SC mask using penalized RMSE, lambda = 2: \n", lmbda = 1)
 best_obj_value = float('inf')
+
 load_groun_truth_chidist_data()
 
 result = nomad.optimize(tkd_optimizer, x0, lb, ub, nomad_params)

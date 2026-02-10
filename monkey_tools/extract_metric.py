@@ -111,25 +111,28 @@ def extract_values_per_vertebrae(input_data, mask, vertfile, participant_id, tis
 
     return records
 
-def chimap_comp_wm_gm_custom(dub, meas, root_dir, test_folders, gm_msk_path, wm_msk_path):
+def multi_algo_comp_wm_gm_custom(dub, meas, algo_type, root_dir, test_folders, gm_msk_path, wm_msk_path):
     compare_chimap_rows = []
 
     for algo in test_folders:
 
-        chimap_map_path = os.path.join(root_dir, algo, "Sepia_Chimap.nii.gz")
-        
-        if chimap_map_path is None or not os.path.exists(chimap_map_path):
-            print(f"Chi map not found for {algo}, skipping...")
+        if algo_type == "bgfr":
+            map_path = os.path.join(root_dir, algo, "Sepia_localfield.nii.gz")
+        if algo_type == "chi_map":
+            map_path = os.path.join(root_dir, algo, "Sepia_Chimap.nii.gz")
+
+        if map_path is None or not os.path.exists(map_path):
+            print(f"{algo_type} resulting map not found for {algo}, skipping...")
             continue
         
-        chimap_img = nib.load(chimap_map_path)
-        chimap_data = chimap_img.get_fdata()
+        map_img = nib.load(map_path)
+        map_data = map_img.get_fdata()
 
         gm_msk_data = nib.load(gm_msk_path).get_fdata()
         wm_msk_data = nib.load(wm_msk_path).get_fdata()
 
-        gm_vals = chimap_data[(gm_msk_data == 1 ) & (chimap_data != 0)].ravel()
-        wm_vals = chimap_data[(wm_msk_data == 1 ) & (chimap_data != 0)].ravel()
+        gm_vals = map_data[(gm_msk_data == 1 ) & (map_data != 0)].ravel()
+        wm_vals = map_data[(wm_msk_data == 1 ) & (map_data != 0)].ravel()
 
         # Calculate total voxel count
         total_vox_gm = np.sum(gm_msk_data == 1)
@@ -137,19 +140,19 @@ def chimap_comp_wm_gm_custom(dub, meas, root_dir, test_folders, gm_msk_path, wm_
         
         # Compute metrics for GM and WM
         gm_mean = np.mean(gm_vals)
-        gm_std = np.std(chimap_data[gm_msk_data == 1])
+        gm_std = np.std(map_data[gm_msk_data == 1])
         
         wm_mean = np.mean(wm_vals)
-        wm_std = np.std(chimap_data[wm_msk_data == 1])
+        wm_std = np.std(map_data[wm_msk_data == 1])
         
         # Calculate how many voxels are in the mask
-        gm_nonzero_vox = np.sum(chimap_data[gm_msk_data==1] != 0)
-        wm_nonzero_vox = np.sum(chimap_data[wm_msk_data==1] != 0)
+        gm_nonzero_vox = np.sum(map_data[gm_msk_data==1] != 0)
+        wm_nonzero_vox = np.sum(map_data[wm_msk_data==1] != 0)
 
         contrast = np.abs(gm_mean - wm_mean) # Subtract wm from gm because wm should be negative
         # This way, if WM is not negative we get a negative contrast which is bad!
 
-        denominator = np.sqrt(gm_std**2 + wm_std**2)
+        denominator = np.sqrt((gm_std**2 + wm_std**2)/2)
 
         raw_metric = contrast / denominator if denominator != 0 else 0 # Just in case that the std is 0 - to avoid division by zero
 
@@ -179,10 +182,125 @@ def chimap_comp_wm_gm_custom(dub, meas, root_dir, test_folders, gm_msk_path, wm_
     
                 'contrast_factor': contrast,
                 'std_denominator': denominator,
-                #'raw_metric': raw_metric,
+                'raw_metric': raw_metric,
                 
                 'final_metric': final_metric
                 })
         
         df = pd.DataFrame(compare_chimap_rows)
+    return df
+
+# Now similar but for just 1 algo, compare along slices
+
+def single_algo_comp(dub,meas, root_dir, test_folders, sc_msk_path, gm_msk_path, wm_msk_path, metric=None):
+    compare_chimap_rows = []
+
+    for algo in test_folders:
+
+        chimap_map_path = os.path.join(root_dir, algo, "Sepia_Chimap.nii.gz")
+
+        if chimap_map_path is None or not os.path.exists(chimap_map_path):
+            print(f"Chi map not found for {algo}, skipping...")
+            continue
+        
+        chimap_img = nib.load(chimap_map_path)
+        chimap_data = chimap_img.get_fdata()
+
+        sc_msk_data = nib.load(sc_msk_path).get_fdata()
+        gm_msk_data = nib.load(gm_msk_path).get_fdata()
+        wm_msk_data = nib.load(wm_msk_path).get_fdata()
+
+        # Now loop through slices
+        for slice_idx in range(chimap_data.shape[2]): # Go through z direction
+            chimap_slice = chimap_data[:, :, slice_idx]
+            sc_msk_slice = sc_msk_data[:, :, slice_idx]
+            gm_msk_slice = gm_msk_data[:, :, slice_idx]
+            wm_msk_slice = wm_msk_data[:, :, slice_idx]
+
+            total_slice_vox_gm = np.sum(gm_msk_slice == 1)
+            total_slice_vox_wm = np.sum(wm_msk_slice == 1)
+
+            gm_vals = chimap_slice[(gm_msk_slice == 1 ) & (chimap_slice != 0)].ravel()
+            wm_vals = chimap_slice[(wm_msk_slice == 1 ) & (chimap_slice != 0)].ravel()
+
+            if gm_vals.size == 0 or wm_vals.size == 0:
+                continue  # Skip if no values found for this slice
+
+            # Compute metrics for GM and WM
+            gm_mean = np.mean(gm_vals)
+            gm_std = np.std(chimap_slice[gm_msk_slice == 1])
+            
+            wm_mean = np.mean(wm_vals)
+            wm_std = np.std(chimap_slice[wm_msk_slice == 1])
+
+            sc_std = np.std(chimap_slice[sc_msk_slice == 1])
+            
+            contrast = np.abs(gm_mean - wm_mean) # Subtract wm from gm because wm should be negative
+            # This way, if WM is not negative we get a negative contrast which is bad!
+
+            #denominator = np.sqrt((gm_std**2 + wm_std**2)/2)
+            denominator = np.sqrt(sc_std**2/2)
+
+            # We expect that gm_mean to be 0.03 and wm_mean to be -0.03 
+            # therefore contrast should be 0.06 ideally! we will penalized based on how far we are
+            gm_metric_penalty = np.abs(gm_mean - 0.03) / 0.03
+            wm_metric_penalty = np.abs(wm_mean + 0.03) / 0.03
+
+            penalized_contrast = np.abs(gm_metric_penalty - wm_metric_penalty)
+            contrast = penalized_contrast
+            raw_metric = contrast / denominator if denominator != 0 else 0 # Just in case that the std is 0 - to avoid division by zero
+
+            gm_nonzero_vox = np.sum(chimap_slice[gm_msk_slice==1] != 0)
+            wm_nonzero_vox = np.sum(chimap_slice[wm_msk_slice==1] != 0)
+
+                        # Now collect row and add to data frame
+            gm_penalty = gm_nonzero_vox / total_slice_vox_gm if total_slice_vox_gm != 0 else 0
+            wm_penalty = wm_nonzero_vox / total_slice_vox_wm if total_slice_vox_wm != 0 else 0
+
+            # Final metric
+            final_metric = raw_metric * gm_penalty * wm_penalty 
+
+                    # Now collect row and add to data frame
+            compare_chimap_rows.append({
+                'subject': dub,
+                'measurement': meas,
+                'test_folder': algo,
+                'slice_index': slice_idx,
+                'mean_gm': gm_mean,
+                'std_gm': gm_std,
+                'total_vox_gm': total_slice_vox_gm,
+                'nonzero_vox_gm': gm_nonzero_vox,
+                'gm_penality': gm_penalty,
+
+                'mean_wm': wm_mean,
+                'std_wm': wm_std,
+                'total_vox_wm': total_slice_vox_wm,
+                'nonzero_vox_wm': wm_nonzero_vox,
+                'wm_penality': wm_penalty,
+    
+                'contrast_factor': contrast,
+                'std_denominator': denominator,
+                'raw_metric': raw_metric,
+                
+                'final_metric': final_metric
+                })
+        
+            df = pd.DataFrame(compare_chimap_rows)
+
+        # Now plot the selected metric (optional) for all algos
+        # after calculating everithing for the slices
+        # To avoid multiple plots, we can do it outside the algo loop
+    if metric is not None:
+        plt.figure(figsize=(10, 6))
+        for algo in test_folders:
+            algo_df = df[df['test_folder'] == algo]
+            plt.plot(algo_df['slice_index'], algo_df[metric], label=algo, color=np.random.rand(3,), marker='o')
+
+        plt.xlabel('Slice Index')
+        plt.ylabel(metric)
+        plt.title(f'{metric} across slices for different algorithms')
+        plt.legend()
+        plt.grid()
+        plt.show()
+
     return df

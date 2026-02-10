@@ -178,6 +178,7 @@ save("chi_003_m6_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 %% Header for chi_004, we have 3 acq. protocols:
 % for m1, 2 &3 all have same echo train: [0.00693, 0.01185, 0.01685, 0.02185, 0.02685], 
 % matrixSize = [384, 384, 16], voxelSize = [0.4427, 0.4427, 5]
+% For chi_005 and chi_008 we have the same acquisition, so same header
 
 TE = [0.00693, 0.01185, 0.01685, 0.02185, 0.02685];
 B0 = 3;
@@ -186,7 +187,7 @@ CF = 123249367; % In Hz, B0 * gyromagnetic ratio 123.249367 127740000
 matrixSize = [384, 384, 16]; % The "dimensions" of the image used
 voxelSize = [0.4427, 0.4427, 5]; % Pixdim 
 
-save("chi_004_m1_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+save("chi_007_m1_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
 %% Header for Swiss 7T 
 % 
