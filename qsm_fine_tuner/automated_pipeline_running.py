@@ -38,7 +38,7 @@ def signal_to_fm_Hz(mag_path, ph_path, TEs, outfn, msk_path=None, romeo_path="c:
     else:
         cmd += ["-B", "-Q", "-t", TE_str, "-o", outfn]
 
-    if phs_offset_correction:
+    if phs_offset_correction == "bipolar" or phs_offset_correction == "on" or phs_offset_correction == "off":
         print("Offset correction found, using: ", phs_offset_correction)
         cmd += ["--phase-offset-correction", phs_offset_correction]
 
@@ -107,7 +107,7 @@ def dict_of_algo_params(algo, step):
         bgfr_params['bfr'] = {
             'method': "RESHARP",
             'radius': matlab.double(1),
-            'depth': matlab.double(0.02),
+            'depth': matlab.double(0.022),
             "refine_order" : 4,
             'erode_radius': 0,
             'erode_before_radius': 0
@@ -116,9 +116,9 @@ def dict_of_algo_params(algo, step):
     elif algo == "opt_pdf":
         bgfr_params['bfr'] = {
             'method': "PDF",
-            'tol': matlab.double(0.001),
+            'tol': matlab.double(0.42),
             'iteration': matlab.double(200),
-            'padSize': matlab.double(34),
+            'padSize': matlab.double(14),
             "refine_method" : "None",
             "refine_order" : 4,
             'erode_radius': 0,
@@ -141,7 +141,7 @@ def dict_of_algo_params(algo, step):
         bgfr_params['bfr'] = {
             'method': "SHARP",
             'radius': matlab.double(1),
-            'threshold': matlab.double(0.03),
+            'threshold': matlab.double(0.0075),
             "refine_order" : 4,
             'erode_radius': 0,
             'erode_before_radius': 0
@@ -159,7 +159,7 @@ def dict_of_algo_params(algo, step):
         di_params['qsm'] = {
             'reference_tissue': "Brain mask",
             "method": "TKD",
-            'threshold': matlab.double(0.024)
+            'threshold': matlab.double(0.0114)
         }
                 
     elif algo == "def_iLSQR":
@@ -176,8 +176,8 @@ def dict_of_algo_params(algo, step):
         di_params['qsm'] = {
             'reference_tissue': "Brain mask",
             "method": "iLSQR",
-            'tol': matlab.double(0.000001),
-            'maxiter': matlab.double(57),
+            'tol': matlab.double(0.001),
+            'maxiter': matlab.double(60),
             'lambda': matlab.double(0.00001),
             'optimise': matlab.double(0)
         }
@@ -240,8 +240,8 @@ def dict_of_algo_params(algo, step):
             "method": "FANSI",
             'tol': matlab.double(0.05),
             'maxiter': matlab.double(300),
-            'lambda': matlab.double(0.01173),
-            'mu1': matlab.double(0.4542),
+            'lambda': matlab.double(0.001838), # Gradient penalty 
+            'mu1': matlab.double(0.012593), # Gradient consistency
             'mu2': matlab.double(1),
             'solver': "Non-linear",
             'constraint': "TGV",
@@ -271,7 +271,7 @@ def dict_of_algo_params(algo, step):
             "method": "MEDI",
             'wData': matlab.double(1),
             'lambda': matlab.double(10000),
-            'percentage': 92,
+            'percentage': 99,
             'zeropad':  np.array([0,0,0]),
             'isSMV': 0,
             'radius': matlab.double(1), # Doens't matter because we are removing it!

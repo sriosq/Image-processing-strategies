@@ -47,7 +47,7 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, thr):
     print("Chi map Created! Calculate metrics and update parameters!")
 
 
-def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda = 1.5):
+def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda = 1):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path, lambda_noise
 
     lambda_noise = lmbda
@@ -58,7 +58,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt/snr_60/iter_TKD/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_30/iter_TKD/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -67,7 +67,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_60\iter_TKD/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_30\iter_TKD/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
@@ -85,7 +85,7 @@ def load_groun_truth_chidist_data():
     # Now apply the offset to the ground truth map
     #chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
     
-    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\di_gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
+    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\bgfr_gt_ref_avg_onlySC_gauss_chi_dist_crop.nii.gz").get_fdata()
 
     print("Ground truth susceptibility map loaded")
 
@@ -96,13 +96,13 @@ def log_best_solution(obj_value, iteration, thr, gm_rmse, wm_rmse, noise_penalty
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"Iteration: {iteration}: noisy_OBJ {obj_value} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} | noise penalty: {noise_penalty} \n")
+                file.write(f"#Iter {iteration}: Obj. RMSE: {obj_value} | noise penalty: {noise_penalty} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"Iteration: {iteration}: noisy_OBJ {obj_value} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} | noise penalty: {noise_penalty} \n")
+            file.write(f"#Iter {iteration}: Obj. RMSE: {obj_value} | noise penalty: {noise_penalty} // Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
 
 
 def tkd_optimizer(x):
@@ -123,15 +123,15 @@ def tkd_optimizer(x):
     
     print("Output FN used:", output_fn)
     
-    # Using GT Local Field as input, test with the LF with different SNR levels, start at 60, test at 20 and 100 and look for convergence
-    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\noisy\cropped\di_in_gt_ref_avg_sc_lf_Hz_snr60_crop.nii.gz") 
+    # Using GT Local Field as input, test with the LF with different SNR levels, start at 30, test at 20, 60, 80 or 100 and look for convergence
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\noisy\di_input_ref_avg_onlySC_lf_Hz_snr30.nii.gz") 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_100\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_70\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
@@ -187,11 +187,9 @@ def tkd_optimizer(x):
     objective_rmse = gm_rmse + wm_rmse
     noise_penalty = lambda_noise * (gm_std_diff + wm_std_diff)
 
-    noise_penalty_obj = objective_rmse + noise_penalty
+    noise_penalty_obj = objective_rmse + (1*noise_penalty)
 
-
-    log_best_solution(noise_penalty_obj, counter, thr, gm_rmse, wm_rmse, noise_penalty)
-
+    log_best_solution(objective_rmse, counter, thr, gm_rmse, wm_rmse, noise_penalty)
 
     print(f"Iter {counter}: Threshold={thr}, noise penalized GM+WM RMSE = {noise_penalty_obj}")
 
@@ -201,6 +199,7 @@ def tkd_optimizer(x):
         'threshold': float(thr),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
+        'obj_RMSE':float(objective_rmse),
         'noise_penalty': float(noise_penalty),
         'noisy_objective_value': float(noise_penalty_obj)
     }
@@ -226,7 +225,7 @@ nomad_params = [
     "DIMENSION 1",
     "BB_INPUT_TYPE (R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 200",
+    "MAX_BB_EVAL 10",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -239,7 +238,7 @@ nomad_params = [
 # Lower value may retain more details but increase noise
 # Begin:
 start_time = time.time()
-x0 = [0.015] # Recommended by SEPIA (for brain)
+x0 = [0.15] # Recommended by SEPIA (for brain)
 
 lb = [0.00001]
 
@@ -247,7 +246,10 @@ ub = [0.6]
 
 counter = 0
 
-configure_experiment_run("noise_lambda1/RMSE_test_new_strategy", first_line="Optimization results for TKD optimizer, GT LF input, SNR 60, only SC mask using penalized RMSE, lambda = 2: \n", lmbda = 1)
+noise_lambda =  0.5
+first_line= f"Optimization results for TKD optimizer, GT LF input: SNR 30, only SC mask using penalized RMSE, lambda = {noise_lambda}: \n"
+
+configure_experiment_run("RMSE_for_def_RMSE", first_line=first_line, lmbda=noise_lambda)
 best_obj_value = float('inf')
 
 load_groun_truth_chidist_data()

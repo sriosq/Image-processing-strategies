@@ -65,8 +65,10 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, tol, maxi
     print("Chi map! Calculate metrics and update parameters!")
 
 
-def configure_experiment_run(test_fn, first_line="Optimization results: "):
-    global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
+def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda = 1):
+    global gm_mask_data, wm_mask_data, iter_folder, txt_file_path, lambda_noise
+
+    lambda_noise = lmbda
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
 
@@ -74,7 +76,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: "):
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt/snr_60/iter_FANSI/weakH_off/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_60/iter_fansi/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -83,7 +85,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: "):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt/snr_60/iter_FANSI/weakH_off/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_60\iter_fansi/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
@@ -100,27 +102,26 @@ def load_groun_truth_chidist_data():
 
     # Now apply the offset to the ground truth map
     #chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
-    # Or load the already referenced map
-
-    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\di_gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
+    
+    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\bgfr_gt_ref_avg_onlySC_gauss_chi_dist_crop.nii.gz").get_fdata()
 
     print("Ground truth susceptibility map loaded")
 
-def log_best_solution(obj_value, iteration, tol, maxiter, lmbda, mu1, mu2, solver, constraint, gmode, isWeakH, beta, muh, gm_rmse, wm_rmse):
+def log_best_solution(obj_value, iteration, tol, maxiter, lmbda, mu1, mu2, solver, constraint, gmode, isWeakH, beta, muh, gm_rmse, wm_rmse, noise_penalty):
     global best_obj_value
     total_rmse = gm_rmse + wm_rmse
     if obj_value <= best_obj_value:
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"Iterration: {iteration}: OBJ {obj_value} // Tolerance: {tol}, #of Iter: {maxiter}, Lamba:{lmbda}, // Gradient Consistency: {mu1}, Fidelity consistency: {mu2}, Solver: {solver}, Constraint: {constraint}, Gradient mode: {gmode}, WeakH: {isWeakH}, Harmonic constraint: {beta}, Harmonic consistency: {muh} // GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                file.write(f"#Iter: {iteration}: Obj. RMSE: {obj_value} | noise penalty: {noise_penalty} // Params: Tolerance: {tol}, maxIter: {maxiter}, Lamba:{lmbda}, // Gradient Consistency: {mu1}, Fidelity consistency: {mu2}, Solver: {solver}, Constraint: {constraint}, Gradient mode: {gmode}, WeakH: {isWeakH}, Harmonic constraint: {beta}, Harmonic consistency: {muh} // GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
                            
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-                file.write(f"Iterration: {iteration}: OBJ {obj_value} // Tolerance: {tol}, #of Iter: {maxiter}, Lamba:{lmbda}, // Gradient Consistency: {mu1}, Fidelity consistency: {mu2}, Solver: {solver}, Constraint: {constraint}, Gradient mode: {gmode}, WeakH: {isWeakH}, Harmonic constraint: {beta}, Harmonic consistency: {muh} // GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                file.write(f"#Iter: {iteration}: Obj. RMSE: {obj_value} | noise penalty: {noise_penalty} // Params: Tolerance: {tol}, maxIter: {maxiter}, Lamba:{lmbda}, // Gradient Consistency: {mu1}, Fidelity consistency: {mu2}, Solver: {solver}, Constraint: {constraint}, Gradient mode: {gmode}, WeakH: {isWeakH}, Harmonic constraint: {beta}, Harmonic consistency: {muh} // GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
 
 
 def FANSI_optimizer_weakH_off(x):
@@ -136,7 +137,7 @@ def FANSI_optimizer_weakH_off(x):
 
     tol = 0.1 # Tolerance default is 0.1, heuristic definition 0.05
     maxiter = 150 # Default is 150, extended to 300 for better convergence
-    lmbda = x.get_coord(0) # lambda is Gradient L1 penalty, this is how SEPIA handles it, I will submit a change to their repo cos its confusing
+    lmbda = x.get_coord(0) # lambda is Gradient L1 penalty, this is how SEPIA handles it, I will submit a change to their repo cos its confusing because it says alpha1 when overlaying the cursos
     mu1 = x.get_coord(1) # Gradient consistency
     mu2 = 1 # Fidelity consistency and should remain 1 - this just uses the magnitude
     solver = 'Non-linear'  # 'Non-linear' or 'Linear', we fix to non-linear
@@ -161,14 +162,14 @@ def FANSI_optimizer_weakH_off(x):
     
     print("Output FN used:", output_fn)
 
-    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\noisy\cropped\di_in_gt_ref_avg_sc_lf_Hz_snr60_crop.nii.gz") 
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\noisy\di_input_ref_avg_onlySC_lf_Hz_snr60.nii.gz") 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_70\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
@@ -221,11 +222,14 @@ def FANSI_optimizer_weakH_off(x):
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
 
-    objective_value = gm_rmse + wm_rmse
+    obj_rmse = gm_rmse + wm_rmse
+    noise_penalty = lambda_noise * (gm_std_diff + wm_std_diff)
 
-    log_best_solution(objective_value, counter, tol, maxiter, lmbda, mu1, mu2, solver, constraint, gmode, isWeakHarmonic, beta, muh, gm_rmse, wm_rmse)
+    noise_penalty_obj = obj_rmse + (1*noise_penalty)
 
-    print(f"Iter {counter}: GM+WM RMSE = {objective_value}")
+    log_best_solution(obj_rmse, counter, tol, maxiter, lmbda, mu1, mu2, solver, constraint, gmode, isWeakHarmonic, beta, muh, gm_rmse, wm_rmse, noise_penalty)
+
+    print(f"Iter {counter}: noise penalized GM+WM RMSE = {noise_penalty_obj}")
 
 
     # Data to save
@@ -245,7 +249,8 @@ def FANSI_optimizer_weakH_off(x):
         "Harmonic consistency": muh,
         "gm_rmse": gm_rmse,
         "wm_rmse": wm_rmse,
-        "objective_value": objective_value
+        "objective_rmse": obj_rmse,
+        'noise_penalty':noise_penalty
     }
 
     # We want this to be saved in the precise run so:
@@ -257,7 +262,7 @@ def FANSI_optimizer_weakH_off(x):
     # Increase counter
     counter += 1
 
-    rawBBO = str(objective_value)
+    rawBBO = str(noise_penalty_obj)
     x.setBBO(rawBBO.encode("UTF-8"))
 
     return 1
@@ -266,17 +271,17 @@ def FANSI_optimizer_weakH_off(x):
 
 nomad_params_weak_OFF = [
     "DIMENSION 2",
-    "BB_INPUT_TYPE (R R)", # lmbda, mu1, mu2, beta and muh
+    "BB_INPUT_TYPE (R R)", # lmbda, mu1
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 10",
+    "MAX_BB_EVAL 5",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ"
 ]
 
 nomad_params_weak_ON = [
-    "DIMENSION 5",
-    "BB_INPUT_TYPE (R R R R R)", # lmbda, mu1, mu2, beta and muh
+    "DIMENSION 4",
+    "BB_INPUT_TYPE (R R R R)", # lmbda, mu1, beta and muh
     "BB_OUTPUT_TYPE OBJ",
     "MAX_BB_EVAL 20",
     "DISPLAY_DEGREE 2",
@@ -296,7 +301,8 @@ nomad_params_weak_ON = [
 
 # Begin:
 start_time = time.time()
-# Parameters are: [lmbda, mu1, mu2, beta, muh] beta and muh are only used if isWeakHarmonic = 1
+# Parameters are: [lmbda, mu1]
+# Gradient L1 penalty and Gradient consistency 
 x0_weakOFF = [0.0002, 0.02] # Recommended by SEPIA (for brain)
 
 lb_weakOFF = [0.0000001, 0.0000002]
@@ -345,8 +351,8 @@ counter = 0
 # After careful consideration and testing, we decide to use only Non-Linear solver
 # And begin with using TV 
 
-first_line = "Optimization results for FANSI @60 SNR, Non-Linear TV L1, weak harmonics OFF:"
-configure_experiment_run("heuristic_nL_TV_L1_weakH_off/test2_for_def_rmse", first_line)
+first_line = "Optimization results for FANSI @60 SNR, Non-Linear TV L1, weak harmonics OFF for default paramas RMSE:"
+configure_experiment_run("test2_for_def_rmse", first_line)
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 

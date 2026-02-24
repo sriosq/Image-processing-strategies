@@ -48,8 +48,10 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, lambda_re
     print("Chi map! Calculate metrics and update parameters!")
 
 
-def configure_experiment_run(test_fn, first_line="Optimization results: "):
-    global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
+def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda = 1):
+    global gm_mask_data, wm_mask_data, iter_folder, txt_file_path, lambda_noise
+
+    lambda_noise = lmbda
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
 
@@ -57,20 +59,19 @@ def configure_experiment_run(test_fn, first_line="Optimization results: "):
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_90\iter_closed_form/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_60/iter_closedForm/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
-        print("Folder already exists and is not empty. Please delete the folder or choose a different name.")   
+        print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
         sys.exit(1)
     else:
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\chi_mapping_opt\snr_90\iter_closed_form/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_60\iter_closedForm/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
-        
 
 def load_groun_truth_chidist_data():
     global chimap_ref_sc_avg_
@@ -84,26 +85,25 @@ def load_groun_truth_chidist_data():
 
     # Now apply the offset to the ground truth map
     #chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
-    # Or load the already referenced map
-
-    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\di_gt_ref_avg_sc_gauss_chi_dist_crop.nii.gz").get_fdata()
+    
+    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\bgfr_gt_ref_avg_onlySC_gauss_chi_dist_crop.nii.gz").get_fdata()
 
     print("Ground truth susceptibility map loaded")
 
-def log_best_solution(obj_value, iteration, lambd_reg, opt_flag, gm_rmse, wm_rmse):
+def log_best_solution(obj_value, iteration, lambd_reg, gm_rmse, wm_rmse, noise_penalty):
     global best_obj_value
     total_rmse = gm_rmse + wm_rmse
     if obj_value <= best_obj_value:
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"Iteration: {iteration}: OBJ {obj_value} // Lambda: {lambd_reg}, Optimise: {opt_flag}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                file.write(f"#Iter {iteration}: Obj. RMSE {obj_value} | noise penalty: {noise_penalty}// Lambda: {lambd_reg}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Lambda: {lambd_reg}, Optimise: {opt_flag}GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+            file.write(f"#Iter {iteration}: Obj. RMSE {obj_value} | noise penalty: {noise_penalty} // Lambda: {lambd_reg} GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
 
 
 def closed_form_optimizer(x):
@@ -125,14 +125,14 @@ def closed_form_optimizer(x):
     
     print("Output FN used:", output_fn)
 
-    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\noisy\cropped\di_in_gt_ref_avg_sc_lf_Hz_snr90_crop.nii.gz") 
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\noisy\di_input_ref_avg_onlySC_lf_Hz_snr60.nii.gz") 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_70\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
@@ -184,10 +184,14 @@ def closed_form_optimizer(x):
 
     # Objective: Maximize the difference between GM and WM means
     # PyNomad minimizes, so return negative to maximize
-    objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, reg_param, optimise_flag, gm_rmse, wm_rmse)
+    objective_rmse = gm_rmse + wm_rmse
+    noise_penalty = lambda_noise * (gm_std_diff + wm_std_diff)
 
-    print(f"Iter {counter}: Lambda = {reg_param}, Self-optimization = {optimise_flag}, GM+WM RMSE = {objective_value}")
+    noise_penalty_obj = objective_rmse + (1*noise_penalty)
+
+    log_best_solution(objective_rmse, counter, reg_param, gm_rmse, wm_rmse, noise_penalty=noise_penalty)
+
+    print(f"Iter {counter}: Lambda = {reg_param}, Self-optimization = {optimise_flag}, GM+WM RMSE = {objective_rmse} with noise penalty = {noise_penalty}")
 
     # Data to save
     sidecar_data = {
@@ -195,7 +199,9 @@ def closed_form_optimizer(x):
         'Lambda': float(reg_param),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
-        'objective_value': float(objective_value)
+        'objective_value': float(objective_rmse),
+        'noise_penalty': float(noise_penalty),
+        'noisy_objective_value': float(noise_penalty_obj)
     }
 
     # Increase counter
@@ -207,7 +213,7 @@ def closed_form_optimizer(x):
         json.dump(sidecar_data, json_file, indent=4)
     print("Sidecar data saved to:", json_filename)
 
-    rawBBO = str(objective_value)
+    rawBBO = str(noise_penalty_obj)
     x.setBBO(rawBBO.encode("UTF-8"))
 
     return 1
@@ -218,7 +224,7 @@ nomad_params = [
     "DIMENSION 1",
     "BB_INPUT_TYPE (R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 150",
+    "MAX_BB_EVAL 120",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -250,7 +256,9 @@ ub = [5e-1]
 
 counter = 0
 
-configure_experiment_run("RMSE_test2_onlySCmsk", first_line="Optimization results for Closed-form optimizer, GT LF input, SNR 20, only SC mask:")
+noise_lambda = 0.5
+first_line = f"Optimization results for Closed-form optimizer, GT LF input, SNR 60, only SC mask with penalized RMSE, lambda = {noise_lambda}"
+configure_experiment_run("RMSE_test1_onlySCmsk", first_line=first_line, lmbda=noise_lambda)
 
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()

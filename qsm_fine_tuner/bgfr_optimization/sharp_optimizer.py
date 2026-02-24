@@ -50,7 +50,7 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, radi
     eng.python_wrapper(in1, in2, in3, in4 , method, output_basename, mask_filename, bfr_params, nargout = 0)
     print("Local Field Created! Calculate metrics and update parameters!")
 
-def configure_experiment_run(test_fn):
+def configure_experiment_run(test_fn, first_line="Optimization results: "):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
@@ -60,8 +60,8 @@ def configure_experiment_run(test_fn):
 
     print("GM and WM masks loaded successfully.")
 
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_SHARP/{test_fn}"
-   
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_70\iter_sharp/{test_fn}"
+    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
         sys.exit(1)
@@ -69,14 +69,18 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_SHARP/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_70\iter_sharp/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
-        file.write("Optimization results.\n")
-  
+        first_line_txt =  first_line + "\n"
+        file.write(first_line_txt)
+        
+    print("Results file created at:", txt_file_path)
+
 def load_groun_truth_data():
-    global wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data
-    wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
+    global crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data
+    crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\bgfr_gt_ref_avg_onlySC_fm_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
+
 
 def log_best_solution(obj_value, iteration, radius, thr, gm_rmse, wm_rmse):
     global best_obj_value
@@ -85,13 +89,13 @@ def log_best_solution(obj_value, iteration, radius, thr, gm_rmse, wm_rmse):
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"Iteration: {iteration}: OBJ {obj_value} // SMV radius: {radius}, Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                file.write(f"#Iter: {iteration}: OBJ {obj_value} // SMV radius: {radius}, Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"Iteration: {iteration}: OBJ {obj_value} // SMV radius: {radius}, Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+            file.write(f"#Iter {iteration}: OBJ {obj_value} // SMV radius: {radius}, Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
 
 def sharp_optimizer(x):
     global counter
@@ -113,10 +117,10 @@ def sharp_optimizer(x):
     print("Output FN used:", output_fn)
 
     #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_74\fm_tests\test1_simple\B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_70\fm_tests\test1_simple\B0.nii")
     # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\qsm_processing_msk_crop.nii.gz")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks/only_sc_crop.nii.gz")
     
     in1 = custom_fm_path
     in2 = ""
@@ -133,7 +137,7 @@ def sharp_optimizer(x):
     local_field_data = local_field_img.get_fdata()
 
     # Now, we compute the difference between current local field with the Ground Truth
-    pixel_wise_difference = wb_gt_avg_sc_ref_swiss_crop_fm_Hz_data - local_field_data
+    pixel_wise_difference = crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data - local_field_data
     gm_diff = pixel_wise_difference[gm_mask_data==1]
     wm_diff = pixel_wise_difference[wm_mask_data==1]
 
@@ -224,7 +228,8 @@ ub=[12, 0.1]
 
 counter = 0
 
-configure_experiment_run("RMSE_test1_VNS_ON")
+first_line = "BGFR optimization of SHARP @SNR 70:"
+configure_experiment_run("RMSE_test1_VNS_ON", first_line=first_line)
 best_obj_value = float('inf')
 load_groun_truth_data()
 

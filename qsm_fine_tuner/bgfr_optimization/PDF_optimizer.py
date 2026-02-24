@@ -53,7 +53,7 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol,
     print("Local Field Created! Calculate metrics and update parameters!")
 
 
-def configure_experiment_run(test_fn):
+def configure_experiment_run(test_fn, first_line="Optimization results: "):
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
@@ -63,7 +63,7 @@ def configure_experiment_run(test_fn):
 
     print("GM and WM masks loaded successfully.")
 
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_PDF/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_30\iter_PDF/{test_fn}"
     
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -72,15 +72,16 @@ def configure_experiment_run(test_fn):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_74/bgfr_opt\iter_PDF/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_30\iter_PDF/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
-        file.write("Optimization results.\n")
+        first_line_txt =  first_line + "\n"
+        file.write(first_line_txt)
         
     print("Results file created at:", txt_file_path)
 
 def load_groun_truth_data():
     global crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data
-    crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\ground_truth_data\bgfr_gt_ref_avg_sc_lf_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
+    crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\bgfr_gt_ref_avg_onlySC_fm_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
 
 def log_best_solution(obj_value, iteration, tolerance, max_iters, padSize, gm_rmse, wm_rmse):
@@ -119,10 +120,10 @@ def pdf_optimizer(x):
     print("Output FN used:", output_fn)
 
     #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_74\fm_tests\test1_simple\B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_30\fm_tests\test2_msk_apply\B0.nii")
     # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks/qsm_processing_msk_crop.nii.gz")
+    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks/only_sc_crop.nii.gz")
 
     in1 = custom_fm_path
     in2 = ""
@@ -208,7 +209,7 @@ nomad_params = [
     "DIMENSION 2",
     "BB_INPUT_TYPE (R I)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 10",
+    "MAX_BB_EVAL 100",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -230,7 +231,8 @@ ub=[0.5, 100]
 
 counter = 0
 
-configure_experiment_run("tol_and_padSize/RMSE_test2_50_iters")
+first_line = "BGFR optimization of PDF fixing iterations to 50"
+configure_experiment_run("tol_and_padSize/RMSE_test2_onlySC_fixediter50", first_line)
 best_obj_value = float('inf')
 load_groun_truth_data()
 

@@ -8,13 +8,15 @@ import os
 
 def complete_measurement(t1_vol, pd_vol, t2s_vol, dims, deltaB0, FA ,TE, TR, B0, per_echo = 0, outpath="", handedness='right', 
                          noise_flag = False, sigma = None, signal_msk_path=None, noise_msk_path=None):
-    # T1, T2, and T2* volumes assumed to have values in [ms]
-    # dB0 is the Fieldmap in [ppm]
-    # Flip angle input in degrees
-    # Echo time can be a single echo in seconds [s] or a list of echo times [s]
-    # Repetition time in [ms]
-    # B0 is the magnetic field strength in Tesla [T]
-    # Noise flag enables the SNR target
+    '''
+    T1, T2 and T2* volumes in milliseconds
+    dB0 is the fieldmap in parts per million
+    Flip angle in degrees
+    Echo time can be a single echo or a list of echoes in seconds
+    Repetition time in milliseconds
+    B0 is the main magnetic field strength in Tesla
+    Noise flag enables SNR targets following in-vivo sigmas
+    '''
 
     print("Starting optimize_measurement")
     num_TE = len(TE)
@@ -25,7 +27,7 @@ def complete_measurement(t1_vol, pd_vol, t2s_vol, dims, deltaB0, FA ,TE, TR, B0,
     magnitude = np.zeros(newVol_dims)
     phase = np.zeros(newVol_dims)
 
-    # gamma = 42.58 * B0  * 2 * pi  # This is rad*Hz/Tesla 
+    # gamma_bar = 42.58 * B0  * 2 * pi  # This is rad*Hz/Tesla 
     gamma_rd_sT = 267.52218744 * 1e6 # In rad/(sec * T) it needs to be 10e5 or 1e6 
 
     fa = np.deg2rad(FA)
