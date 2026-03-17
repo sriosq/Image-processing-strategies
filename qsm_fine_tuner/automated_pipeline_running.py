@@ -20,9 +20,10 @@ def dictionary_of_pipelines():
     pipelines = {
         "mk1": ["opt_PDF", "opt_TKD"],
         "mk1_zero": ["def_PDF", "def_TKD"],
-        'comp_bgfr':["def_pdf", "def_lbv", "opt_sharp", "opt_resharp", "opt_pdf", "opt_lbv"],
+        'comp_bgfr':["def_pdf", "def_lbv", "opt_sharp", "opt_resharp", "opt_pdf", "opt_lbv", "opt_vsharp"],
         'comp_di': ["def_tkd", "opt_tkd", "def_iLSQR",  "opt_iLSQR", "auto_iLSQR", 
-                    "def_closedForm",  "opt_closedForm", "auto_closedForm", "def_fansi", "opt_fansi"] # For now MEDI manuall run
+                    "def_closedForm",  "opt_closedForm", "auto_closedForm", "def_fansi", "opt_fansi",
+                    "def_medi", "opt_medi"] # For now MEDI manuall run
     }
     return pipelines
 
@@ -107,7 +108,7 @@ def dict_of_algo_params(algo, step):
         bgfr_params['bfr'] = {
             'method': "RESHARP",
             'radius': matlab.double(1),
-            'depth': matlab.double(0.022),
+            'depth': matlab.double(0.002),
             "refine_order" : 4,
             'erode_radius': 0,
             'erode_before_radius': 0
@@ -116,7 +117,7 @@ def dict_of_algo_params(algo, step):
     elif algo == "opt_pdf":
         bgfr_params['bfr'] = {
             'method': "PDF",
-            'tol': matlab.double(0.42),
+            'tol': matlab.double(0.4),
             'iteration': matlab.double(200),
             'padSize': matlab.double(14),
             "refine_method" : "None",
@@ -128,7 +129,7 @@ def dict_of_algo_params(algo, step):
     elif algo == "opt_lbv":
         bgfr_params['bfr'] = {
             'method': "LBV",
-            'tol': matlab.double(0.001),
+            'tol': matlab.double(0.0001),
             'depth': matlab.double(6),
             'peel': matlab.double(1),
             "refine_order" : 4,
@@ -141,7 +142,18 @@ def dict_of_algo_params(algo, step):
         bgfr_params['bfr'] = {
             'method': "SHARP",
             'radius': matlab.double(1),
-            'threshold': matlab.double(0.0075),
+            'threshold': matlab.double(0.007),
+            "refine_order" : 4,
+            'erode_radius': 0,
+            'erode_before_radius': 0
+        }
+    
+    elif algo == "opt_vsharp":
+        radius_list = list(range(2,0,-1))
+        radius_matlab = matlab.double(radius_list)
+        bgfr_params['bfr'] = {
+            'method': "VSHARP",
+            'radius': radius_matlab,
             "refine_order" : 4,
             'erode_radius': 0,
             'erode_before_radius': 0
@@ -159,7 +171,7 @@ def dict_of_algo_params(algo, step):
         di_params['qsm'] = {
             'reference_tissue': "Brain mask",
             "method": "TKD",
-            'threshold': matlab.double(0.0114)
+            'threshold': matlab.double(0.0115)
         }
                 
     elif algo == "def_iLSQR":
@@ -205,7 +217,7 @@ def dict_of_algo_params(algo, step):
         di_params['qsm'] = {
             'reference_tissue': "Brain mask",
             "method": "Closed-form solution",
-            'lambda': matlab.double(0.010962),
+            'lambda': matlab.double(0.004),
             'optimise': matlab.double(0)
 
         }
@@ -240,8 +252,8 @@ def dict_of_algo_params(algo, step):
             "method": "FANSI",
             'tol': matlab.double(0.05),
             'maxiter': matlab.double(300),
-            'lambda': matlab.double(0.001838), # Gradient penalty 
-            'mu1': matlab.double(0.012593), # Gradient consistency
+            'lambda': matlab.double(0.0018), # Gradient penalty 
+            'mu1': matlab.double(0.001), # Gradient consistency
             'mu2': matlab.double(1),
             'solver': "Non-linear",
             'constraint': "TGV",
@@ -270,7 +282,7 @@ def dict_of_algo_params(algo, step):
             'reference_tissue': "Brain mask",
             "method": "MEDI",
             'wData': matlab.double(1),
-            'lambda': matlab.double(10000),
+            'lambda': matlab.double(15000),
             'percentage': 99,
             'zeropad':  np.array([0,0,0]),
             'isSMV': 0,
@@ -395,12 +407,15 @@ def bgfr_comp(fieldmap_path, header_path, mask_path, pipeline_id, outpath):
         algo_name =  bgfr_params['bfr']['method']
         print("Algo: ", algo_name)
         outpath_local_field = os.path.join(outpath, pipeline_id, f"{algo}/Sepia")
+        if os.path.exists(outpath_local_field):
+            print(f"Output path {outpath_local_field} already exists, skipping algo: {algo_name}")
+            continue
         os.makedirs(outpath_local_field, exist_ok=True)
 
         eng.python_wrapper(fieldmap_path, "", "", header_path , algo_name, outpath_local_field, mask_path, bgfr_params, nargout = 0)
         print("Local Field Created! Calculate metrics and update parameters!")
 
-def di_comp(localfield_path, header_path, mask_path, pipeline_id, outpath):
+def di_comp(localfield_path, header_path, mask_path, pipeline_id, outpath, path_to_mag = None):
 
     eng = matlab.engine.start_matlab()
 
@@ -422,18 +437,26 @@ def di_comp(localfield_path, header_path, mask_path, pipeline_id, outpath):
 
     if pipeline_id  not in pipelines:
         raise ValueError(f"Pipeline {pipeline_id} not found on dictionary: /n {pipelines}")
-
+    
+    print("Beginning DI algo comp automated running")
     for algo in pipelines[pipeline_id]:
-        print("Beginning DI algo comp automated running")
+        
         print("Input algo: ", algo)
         di_params = dict_of_algo_params(algo, "di")
         algo_name =  di_params['qsm']['method']
         print("Algo: ", algo_name)
         outpath_chimap = os.path.join(outpath, pipeline_id, f"{algo}/Sepia")
+        if os.path.exists(outpath_chimap):
+            print(f"Output path {outpath_chimap} already exists, skipping algo: {algo_name}")
+            continue
         os.makedirs(outpath_chimap, exist_ok=True)
 
-        eng.python_wrapper(localfield_path, "", "", header_path , algo_name, outpath_chimap, mask_path, di_params, nargout = 0)
-        print("Local Field Created! Calculate metrics and update parameters!")
+        eng.python_wrapper(localfield_path, 
+                           path_to_mag if algo in ["def_medi", "opt_medi"] else "", 
+                           mask_path if algo in ["def_medi", "opt_medi"] else "",
+                           header_path , algo_name, outpath_chimap, mask_path, di_params, nargout = 0)
+        
+        print("Chi-map created! Calculate metrics and update parameters!")
 
 
 

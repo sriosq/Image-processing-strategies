@@ -62,7 +62,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: "):
 
     print("GM and WM masks loaded successfully.")
 
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_30\iter_vsharp/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_70\iter_vsharp/{test_fn}"
     
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -71,7 +71,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: "):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_30\iter_vsharp/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_70\iter_vsharp/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
@@ -106,7 +106,7 @@ def vsharp_optimizer(x):
     #voxelSize = [0.976562, 0.976562, 2.344]
 
     max_radii = x.get_coord(0)
-    min_radii = x.get_coord(1)
+    min_radii = 1
     
     iteration_fn = f"vsharp_run{counter}/"
 
@@ -119,7 +119,7 @@ def vsharp_optimizer(x):
     print("Output FN used:", output_fn)
 
     #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_30\fm_tests\test2_msk_apply\B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_70\fm_tests\test1_simple\B0.nii")
     # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks/only_sc_crop.nii.gz")
@@ -204,10 +204,10 @@ def vsharp_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 2",
-    "BB_INPUT_TYPE (I I)",
+    "DIMENSION 1",
+    "BB_INPUT_TYPE (I)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 50",
+    "MAX_BB_EVAL 20",
     "DISPLAY_DEGREE 2",
     #"STATS_FILE nomad_stats_test2_vsharp.txt $ BBE $ ( SOL )  & $ %.5EOBJ $ ( TIME )",
     "DISPLAY_ALL_EVAL false",
@@ -220,17 +220,18 @@ nomad_params = [
 # To ensure the largest kernel fits withing the image, upper bound for a should be smallest image dimension/2
 # In this case 300/2 = 150
 start_time = time.time()
-x0 = [10, 3] # Recommended by SEPIA (for brain)
+x0 = [2] # Recommended by SEPIA (for brain)
 # I think the best would be to start with the largest kernel and then decrease it
 #x0_largest = [150, 1] # This is the radii list
 
-lb = [2, 1]
+lb = [2]
 
-ub=[150, 149]
+ub=[50]
 
 counter = 0
 
-configure_experiment_run("RMSE_test1_VNS_ON")
+first_line = "BGFR optimization of VSHARP with fixed min radii = 1 @SNR 70:"
+configure_experiment_run("RMSE_test2_only_max_radii")
 best_obj_value = float('inf')
 load_groun_truth_data()
 

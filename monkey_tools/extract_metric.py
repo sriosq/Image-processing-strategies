@@ -111,7 +111,7 @@ def extract_values_per_vertebrae(input_data, mask, vertfile, participant_id, tis
 
     return records
 
-def multi_algo_comp_wm_gm_custom(dub, meas, algo_type, root_dir, test_folders, gm_msk_path, wm_msk_path):
+def multi_algo_comp_wm_gm_custom(dub, meas, algo_type, root_dir, test_folders, gm_msk_path, wm_msk_path, special = 0):
     compare_chimap_rows = []
 
     for algo in test_folders:
@@ -188,7 +188,14 @@ def multi_algo_comp_wm_gm_custom(dub, meas, algo_type, root_dir, test_folders, g
                 })
         
         df = pd.DataFrame(compare_chimap_rows)
-    return df
+    
+    if special:
+        final_metric_sorted_df = df.sort_values(by='final_metric', ascending=False)
+        contrast_sorted_df = df.sort_values(by='contrast_factor', ascending=False)
+        noise_sorted_df = df.sort_values(by='std_denominator', ascending=True)
+        return final_metric_sorted_df, contrast_sorted_df, noise_sorted_df, df
+    else: 
+        return df
 
 # Now similar but for just 1 algo, compare along slices
 
