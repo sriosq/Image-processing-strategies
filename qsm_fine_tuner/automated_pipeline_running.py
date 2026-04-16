@@ -20,12 +20,35 @@ def dictionary_of_pipelines():
     pipelines = {
         "mk1": ["opt_PDF", "opt_TKD"],
         "mk1_zero": ["def_PDF", "def_TKD"],
-        'comp_bgfr':["def_pdf", "def_lbv", "opt_sharp", "opt_resharp", "opt_pdf", "opt_lbv", "opt_vsharp"],
+        'comp_bgfr':["def_pdf", "opt_pdf", "def_lbv", "opt_lbv", "def_sharp", "opt_sharp", "def_resharp", "opt_resharp", "def_vsharp", "opt_vsharp"],
+
         'comp_di': ["def_tkd", "opt_tkd", "def_iLSQR",  "opt_iLSQR", "auto_iLSQR", 
                     "def_closedForm",  "opt_closedForm", "auto_closedForm", "def_fansi", "opt_fansi",
-                    "def_medi", "opt_medi"] # For now MEDI manuall run
+                    "def_medi", "opt_medi"] 
     }
     return pipelines
+
+def call_deepseb(inpath, outpath, cmin, cmax, cbar, maskpath=None):
+    '''
+    Function that run Spinal Cord Toolbox, script: sct_deepseb to create a PNG with all the axial slices of the inpath
+    Mandatory arguments:
+    -inpath: Path to the input image to be imaged
+    -outpath: Path to save the results, must end in .png
+    -cmin: To have accurate maps its important to specify the min. value of the contrast
+    -cmax: To have accurate maps its important to specify the max. value of the contrast
+    -cbar: Select what type of colorbar, eg. blue-to-white-to-red is bwr
+    
+    Optional arguments:
+    -maskpath: Path to mask to create a 0.3 linewidth outline of the provided mask
+
+    Returns Nothing
+    '''
+    cmd = f"sct_deepseb -i{inpath} -o {outpath} -cmin {cmin} -cmax {cmax} -cbar {cbar}"
+    if maskpath!=None:
+        cmd = cmd + f" -s {maskpath}"
+    print("Creating slicewise png save at: ", outpath)
+    subprocess.run(cmd, check=True)
+
 
 def signal_to_fm_Hz(mag_path, ph_path, TEs, outfn, msk_path=None, romeo_path="c:/romeo/romeo.jl", phs_offset_correction = None):
 
@@ -93,6 +116,18 @@ def dict_of_algo_params(algo, step):
             'erode_before_radius': 0
             }
         
+    elif algo == "opt_pdf":
+        bgfr_params['bfr'] = {
+            'method': "PDF",
+            'tol': matlab.double(0.1),
+            'iteration': matlab.double(250),
+            'padSize': matlab.double(14),
+            "refine_method" : "None",
+            "refine_order" : 4,
+            'erode_radius': 0,
+            'erode_before_radius': 0
+        }
+
     elif algo == "def_lbv":
         bgfr_params['bfr'] = {
             'method': "LBV",
@@ -103,34 +138,12 @@ def dict_of_algo_params(algo, step):
             'erode_radius': 0,
             'erode_before_radius': 0
             }
-        
-    elif algo == "opt_resharp":
-        bgfr_params['bfr'] = {
-            'method': "RESHARP",
-            'radius': matlab.double(1),
-            'depth': matlab.double(0.002),
-            "refine_order" : 4,
-            'erode_radius': 0,
-            'erode_before_radius': 0
-        }
-
-    elif algo == "opt_pdf":
-        bgfr_params['bfr'] = {
-            'method': "PDF",
-            'tol': matlab.double(0.4),
-            'iteration': matlab.double(200),
-            'padSize': matlab.double(14),
-            "refine_method" : "None",
-            "refine_order" : 4,
-            'erode_radius': 0,
-            'erode_before_radius': 0
-        }
-
+    
     elif algo == "opt_lbv":
         bgfr_params['bfr'] = {
             'method': "LBV",
             'tol': matlab.double(0.0001),
-            'depth': matlab.double(6),
+            'depth': matlab.double(2),
             'peel': matlab.double(1),
             "refine_order" : 4,
             'erode_radius': 0,
@@ -138,11 +151,52 @@ def dict_of_algo_params(algo, step):
         
         }
 
+    elif algo == "def_sharp":
+        bgfr_params['bfr'] = {
+            'method': "SHARP",
+            'radius': matlab.double(4),
+            'threshold': matlab.double(0.03),
+            "refine_order" : 4,
+            'erode_radius': 0,
+            'erode_before_radius': 0
+        }
+
     elif algo == "opt_sharp":
         bgfr_params['bfr'] = {
             'method': "SHARP",
             'radius': matlab.double(1),
-            'threshold': matlab.double(0.007),
+            'threshold': matlab.double(0.075),
+            "refine_order" : 4,
+            'erode_radius': 0,
+            'erode_before_radius': 0
+        }
+    
+    elif algo == "def_resharp":
+        bgfr_params['bfr'] = {
+            'method': "RESHARP",
+            'radius': matlab.double(4),
+            'alpha': matlab.double(0.01),
+            "refine_order" : 4,
+            'erode_radius': 0,
+            'erode_before_radius': 0
+        }
+
+    elif algo == "opt_resharp":
+        bgfr_params['bfr'] = {
+            'method': "RESHARP",
+            'radius': matlab.double(1),
+            'alpha': matlab.double(0.0022),
+            "refine_order" : 4,
+            'erode_radius': 0,
+            'erode_before_radius': 0
+        }
+    
+    elif algo == "def_vsharp":
+        radius_list = list(range(8,2,-1))
+        radius_matlab = matlab.double(radius_list)
+        bgfr_params['bfr'] = {
+            'method': "VSHARP",
+            'radius': radius_matlab,
             "refine_order" : 4,
             'erode_radius': 0,
             'erode_before_radius': 0
@@ -171,7 +225,7 @@ def dict_of_algo_params(algo, step):
         di_params['qsm'] = {
             'reference_tissue': "Brain mask",
             "method": "TKD",
-            'threshold': matlab.double(0.0115)
+            'threshold': matlab.double(0.319)
         }
                 
     elif algo == "def_iLSQR":
@@ -190,7 +244,7 @@ def dict_of_algo_params(algo, step):
             "method": "iLSQR",
             'tol': matlab.double(0.001),
             'maxiter': matlab.double(60),
-            'lambda': matlab.double(0.00001),
+            'lambda': matlab.double(0.17629),
             'optimise': matlab.double(0)
         }
 
@@ -217,7 +271,7 @@ def dict_of_algo_params(algo, step):
         di_params['qsm'] = {
             'reference_tissue': "Brain mask",
             "method": "Closed-form solution",
-            'lambda': matlab.double(0.004),
+            'lambda': matlab.double(0.17629),
             'optimise': matlab.double(0)
 
         }
@@ -282,8 +336,8 @@ def dict_of_algo_params(algo, step):
             'reference_tissue': "Brain mask",
             "method": "MEDI",
             'wData': matlab.double(1),
-            'lambda': matlab.double(15000),
-            'percentage': 99,
+            'lambda': matlab.double(670),
+            'percentage': 20,
             'zeropad':  np.array([0,0,0]),
             'isSMV': 0,
             'radius': matlab.double(1), # Doens't matter because we are removing it!
@@ -377,7 +431,7 @@ def fieldmap_to_chimap_wrapper(fieldmap_path, header_path, mask_path, pipeline_i
     eng.python_wrapper(local_field_map_path, "", "", header_path , 'TKD', outpath_chi_map, mask_path, di_params_auto, nargout = 0)
     print("Chi map Created! Calculate metrics and update parameters!")
 
-def bgfr_comp(fieldmap_path, header_path, mask_path, pipeline_id, outpath):
+def bgfr_comp(fieldmap_path, header_path, mask_path, pipeline_id, outpath, noise_sd_path=None):
 
     eng = matlab.engine.start_matlab()
 
@@ -407,13 +461,26 @@ def bgfr_comp(fieldmap_path, header_path, mask_path, pipeline_id, outpath):
         algo_name =  bgfr_params['bfr']['method']
         print("Algo: ", algo_name)
         outpath_local_field = os.path.join(outpath, pipeline_id, f"{algo}/Sepia")
+
         if os.path.exists(outpath_local_field):
             print(f"Output path {outpath_local_field} already exists, skipping algo: {algo_name}")
             continue
         os.makedirs(outpath_local_field, exist_ok=True)
 
-        eng.python_wrapper(fieldmap_path, "", "", header_path , algo_name, outpath_local_field, mask_path, bgfr_params, nargout = 0)
+        if noise_sd_path:
+            print("Using noise SD!")
+            eng.python_wrapper(fieldmap_path, "", noise_sd_path, header_path , algo_name, outpath_local_field, mask_path, bgfr_params, nargout = 0)
+        else:
+            eng.python_wrapper(fieldmap_path, "", "", header_path , algo_name, outpath_local_field, mask_path, bgfr_params, nargout = 0)
+        
         print("Local Field Created! Calculate metrics and update parameters!")
+
+        # Now the subrutine for slicewise creation of a PNG with sct
+        png_outpath = os.path.join(outpath, pipeline_id, f"{algo}/{algo}.png")
+        lf_name = os.path.join(outpath, pipeline_id, f"{algo}/Sepia_localfield.nii.gz")
+        call_deepseb(lf_name, png_outpath, "-3", "3", "bwr", maskpath=mask_path)
+
+        # Now go to the next algo
 
 def di_comp(localfield_path, header_path, mask_path, pipeline_id, outpath, path_to_mag = None):
 
@@ -455,6 +522,11 @@ def di_comp(localfield_path, header_path, mask_path, pipeline_id, outpath, path_
                            path_to_mag if algo in ["def_medi", "opt_medi"] else "", 
                            mask_path if algo in ["def_medi", "opt_medi"] else "",
                            header_path , algo_name, outpath_chimap, mask_path, di_params, nargout = 0)
+        
+        # Now the subrutine for slicewise creation of a PNG with sct
+        png_outpath = os.path.join(outpath, pipeline_id, f"{algo}/{algo}.png")
+        lf_name = os.path.join(outpath, pipeline_id, f"{algo}/Sepia_Chimap.nii.gz")
+        call_deepseb(lf_name, png_outpath, "-0.05", "0.05", "bwr", maskpath=mask_path)
         
         print("Chi-map created! Calculate metrics and update parameters!")
 

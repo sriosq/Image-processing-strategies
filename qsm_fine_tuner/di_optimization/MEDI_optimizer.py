@@ -69,7 +69,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_60/iter_medi/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_real/iter_medi/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -78,7 +78,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_60\iter_medi/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_real\iter_medi/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
@@ -138,14 +138,14 @@ def MEDI_SMV_OFF_optimizer(x):
     print("Output FN used:", output_fn)
 
     # Using GT Local Field as input, test with the LF with different SNR levels, start at 60, test at 20 and 100 and look for convergence
-    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\noisy\di_input_ref_avg_onlySC_lf_Hz_snr60.nii.gz") 
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\realistic_noise/di_opt_input_lf_ref_avg_onlySC_lf_Hz.nii.gz") 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_70\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_30\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
@@ -346,7 +346,7 @@ nomad_params = [
     "DIMENSION 2", 
     "BB_INPUT_TYPE (R I)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 50",
+    "MAX_BB_EVAL 100",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -370,7 +370,7 @@ ub = [20000, 99]
 
 counter = 0
 noise_lambda = 0.5
-first_line="Optimization results for MEDI optimizer with SMV & Merit OFF, GT LF input @SNR 60, only SC mask:"
+first_line="Optimization results for MEDI optimizer with SMV & Merit OFF, GT LF with realistic noise, only SC mask: \n"
 configure_experiment_run("RMSE_test1_onlySCmsk", first_line=first_line, lmbda = noise_lambda)
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()

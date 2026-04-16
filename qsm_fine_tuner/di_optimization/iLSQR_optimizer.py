@@ -61,7 +61,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_60/iter_iLSQR/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_real/iter_iLSQR/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -70,7 +70,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_60\iter_iLSQR/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_real\iter_iLSQR/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
@@ -99,13 +99,13 @@ def log_best_solution(obj_value, iteration, tol, maxiter, lambd_reg, gm_rmse, wm
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"#Iter {iteration}: Obj. RMSE: {obj_value} | noise penalty: {noise_penalty} // Tolerance: {tol}, Max # iter.: {maxiter} Lambda: {lambd_reg}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
+                file.write(f"#Iter {iteration}: Obj. RMSE: {obj_value} | noise penalty: {noise_penalty} | RMSE_p: {obj_value+noise_penalty}// Tolerance: {tol}, Max # iter.: {maxiter} Lambda: {lambd_reg}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"#Iter {iteration}: Obj. RMSE: {obj_value} | noise penalty: {noise_penalty}// Tolerance: {tol}, Max # iter.: {maxiter}, Lambda: {lambd_reg}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
+            file.write(f"#Iter {iteration}: Obj. RMSE: {obj_value} | noise penalty: {noise_penalty}| RMSE_p: {obj_value+noise_penalty} // Tolerance: {tol}, Max # iter.: {maxiter}, Lambda: {lambd_reg}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
 
 
 def iLSQR_optimizer(x):
@@ -128,7 +128,7 @@ def iLSQR_optimizer(x):
     
     print("Output FN used:", output_fn)
 
-    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\noisy\di_input_ref_avg_onlySC_lf_Hz_snr60.nii.gz") 
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\realistic_noise/di_opt_input_lf_ref_avg_onlySC_lf_Hz.nii.gz") 
 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
@@ -136,7 +136,7 @@ def iLSQR_optimizer(x):
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_70\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_30\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
@@ -222,7 +222,7 @@ nomad_params = [
     "DIMENSION 3",
     "BB_INPUT_TYPE (R I R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 50",
+    "MAX_BB_EVAL 200",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -235,16 +235,17 @@ nomad_params = [
 # Maximum number of iterations limits LSQR, we can go from 20 to 200 but this may increase the time of computation so its important to optimize!
 # Begin:
 start_time = time.time()
-x0 = [0.001, 100, 0.13] # Recommended by SEPIA (for brain)
+x0 = [0.001, 100, 0.10581] # Recommended by SEPIA (for brain)
+# The L-curve analysis, gave: 0.10581 for lambda, first with this then on 2 iterations run with 0.13 to get brain-recommended RMSE
 
 lb = [0.00000001, 20, 0.00001]
 
-ub = [0.1, 400, 0.5]
+ub = [0.1, 400, 1]
 
 counter = 0
-noise_lambda = 0.3
-first_line = "Optimization results for iLSQR optimizer, GT LF input: SNR 60, only SC mask:"
-configure_experiment_run("RMSE_test1_onlySCmsk", first_line=first_line, lmbda=noise_lambda)
+noise_lambda = 0.5
+first_line = f"Optimization results for iLSQR optimizer, GT LF with realistic noise, only SC mask and penalized RMSE, lambda_noise = {noise_lambda}: \n"
+configure_experiment_run("RMSE_Lcurve_lambda_as_x0", first_line=first_line, lmbda=noise_lambda)
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 

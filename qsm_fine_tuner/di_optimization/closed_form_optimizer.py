@@ -59,7 +59,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_60/iter_closedForm/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_real/iter_closedForm/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -68,7 +68,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_60\iter_closedForm/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_real\iter_closedForm/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
@@ -125,14 +125,14 @@ def closed_form_optimizer(x):
     
     print("Output FN used:", output_fn)
 
-    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\noisy\di_input_ref_avg_onlySC_lf_Hz_snr60.nii.gz") 
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\realistic_noise\di_opt_input_lf_ref_avg_onlySC_lf_Hz.nii.gz") 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_70\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_30\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
@@ -224,7 +224,7 @@ nomad_params = [
     "DIMENSION 1",
     "BB_INPUT_TYPE (R)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 120",
+    "MAX_BB_EVAL 150",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -248,7 +248,8 @@ nomad_params = [
 # - Then set optimise = True and let the L-curve determine the optimal lambda - done manually in SEPIA.
 # Begin:
 start_time = time.time()
-x0 = [0.13] # Recommended by SEPIA (for brain) = 0.13, for our phantom the self-optimized value was calculated to be 0.17779
+# Recommended by SEPIA (for brain) = 0.13, we ran the automatic L-curve and then use that as starting point for second optimization run
+x0 = [0.10581] 
 
 lb = [2e-6]
 
@@ -257,8 +258,8 @@ ub = [5e-1]
 counter = 0
 
 noise_lambda = 0.5
-first_line = f"Optimization results for Closed-form optimizer, GT LF input, SNR 60, only SC mask with penalized RMSE, lambda = {noise_lambda}"
-configure_experiment_run("RMSE_test1_onlySCmsk", first_line=first_line, lmbda=noise_lambda)
+first_line = f"Optimization results for Closed-form optimizer, GT LF with realistic noise from auto lambda, only SC mask with penalized RMSE, lambda = {noise_lambda}: \n"
+configure_experiment_run("RMSE_test2_auto_lmbda_x0", first_line=first_line, lmbda=noise_lambda)
 
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()

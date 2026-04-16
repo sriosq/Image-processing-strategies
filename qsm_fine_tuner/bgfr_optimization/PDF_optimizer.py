@@ -7,6 +7,9 @@ import numpy as np
 import sys
 import json
 import time
+import pandas as pd
+import matplotlib.pyplot as plt
+
 
 def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol, num_iters, padSize):
     eng = matlab.engine.start_matlab()
@@ -28,7 +31,7 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol,
     #  PDF  Parameters
     tolerance = tol
     iterations = num_iters
-    padSize = padSize # Zero padSize 
+    padSize = matlab.double(padSize)
 
     bfr_params = {
     
@@ -54,7 +57,8 @@ def create_local_field(in1, in2, in3, in4 , output_basename, mask_filename, tol,
 
 
 def configure_experiment_run(test_fn, first_line="Optimization results: "):
-    global gm_mask_data, wm_mask_data, iter_folder, txt_file_path
+    global gm_mask_data, wm_mask_data, iter_folder, txt_file_path, results_vector
+    results_vector = []
     gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
 
@@ -63,7 +67,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: "):
 
     print("GM and WM masks loaded successfully.")
 
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_70\iter_PDF/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_30\iter_PDF/{test_fn}"
     
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -72,7 +76,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: "):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_70\iter_PDF/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_30\iter_PDF/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
@@ -84,20 +88,23 @@ def load_groun_truth_data():
     crop_gt_avg_sc_ref_swiss_crop_fm_Hz_data = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\bgfr_gt_ref_avg_onlySC_fm_Hz_crop.nii.gz").get_fdata()# This loads the Ground truth image with the Swiss Acq. Parameters FOV
     print("Ground truth local field loaded")
 
-def log_best_solution(obj_value, iteration, tolerance, max_iters, padSize, gm_rmse, wm_rmse):
+def log_best_solution(obj_value, iteration, tolerance, max_iters, padSize, gm_rmse, wm_rmse, wRMSE=None):
     global best_obj_value
     total_rmse = gm_rmse + wm_rmse
+
     if obj_value <= best_obj_value:
+        out_text = f"Iter #{iteration}: Tolerance: {tolerance}, Max Iters: {max_iters}, PadSize: {padSize} || GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n"
+        out_text = out_text + "| wRMSE: " + str(wRMSE) + "\n" 
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"Iteration: {iteration}: OBJ {obj_value} // Tolerance: {tolerance}, Max Iters: {max_iters}, PadSize: {padSize}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+                file.write(out_text)
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"Iteration: {iteration}: OBJ {obj_value} // Tolerance: {tolerance}, Max Iters: {max_iters}, PadSize: {padSize}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse} \n")
+            file.write(out_text)
 
 def pdf_optimizer(x):
     global counter
@@ -105,9 +112,9 @@ def pdf_optimizer(x):
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
 
-    tolerance = x.get_coord(0)
-    num_iters = 200
-    padSize = x.get_coord(1)
+    tolerance = 0.1
+    num_iters = 250
+    padSize = x.get_coord(0)
     
     iteration_fn = f"pdf_run{counter}/"
 
@@ -120,14 +127,16 @@ def pdf_optimizer(x):
     print("Output FN used:", output_fn)
 
     #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_70\fm_tests\test1_simple\B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_30\fm_tests\test1_simple\B0.nii")
     # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks/only_sc_crop.nii.gz")
-
+    
+    sepia_noise_sd = str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\fm_tests\Sepia_noisesd.nii.gz")
     in1 = custom_fm_path
     in2 = ""
-    in3 = ""
+    in3 = sepia_noise_sd # The third input is for the noise SD map derived from the phase, calculated with SEPIA 
+    # PDF by default creates a ones matrix multiply by 1e-4. 
     in4 = custom_header_path
 
     create_local_field(in1, in2, in3, in4, output_fn, mask_filename, tolerance, num_iters, padSize)
@@ -165,18 +174,39 @@ def pdf_optimizer(x):
     print(f"  RMSE: {wm_rmse:.5f}")
     print("########################")
 
-    # Compute mean fields within masks
-    #gm_mean = np.mean(local_field_data[gm_mask_data == 1])
-    #print("GM_mean: ", gm_mean)
-    #wm_mean = np.mean(local_field_data[wm_mask_data == 1])
-    #print("WM_mean: ", wm_mean)
+    # Compute loss of voxels in WM and GM
+    tot_gm_voxels = np.sum(gm_mask_data == 1)
+    tot_wm_voxels = np.sum(wm_mask_data == 1)
+    tot_voxels = tot_gm_voxels + tot_wm_voxels
     
-    # Objective: Maximize the difference between GM and WM means
-    # PyNomad minimizes, so return negative to maximize
-    objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, tolerance, num_iters, padSize, gm_rmse, wm_rmse)
+    valid_voxels = local_field_data != 0
+    
+    kept_gm_voxels = np.sum((gm_mask_data > 0) & valid_voxels)
+    kept_wm_voxels = np.sum((wm_mask_data > 0) & valid_voxels)
 
-    print(f"Iter {counter}: Tolerance={tolerance}, Max # of iterations(PDF)={num_iters}, Zero padSize={padSize}, GM+WM RMSE={objective_value}")
+    gm_retention = kept_gm_voxels / tot_gm_voxels # Fraction kept in GM  (0 to 1)
+    wm_retention = kept_wm_voxels / tot_wm_voxels # Fraction kept in WM (0 to 1)
+
+    retention_coeff = (kept_gm_voxels + kept_wm_voxels)/(tot_voxels) # Fraction 0 to 1 for total kept voxels
+
+    objective_value = gm_rmse + wm_rmse
+
+    wRMSE = objective_value / retention_coeff
+
+    results_vector.append({
+    "iter": counter,
+    "tolerance": tolerance,
+    "num_iters": num_iters,
+    "padsize": padSize,
+    "gm_rmse": gm_rmse,
+    "wm_rmse": wm_rmse,
+    "RMSE": objective_value,
+    "wRMSE": wRMSE
+})
+
+    log_best_solution(objective_value, counter, tolerance, num_iters, padSize, gm_rmse, wm_rmse, wRMSE=wRMSE)
+
+    print(f"Iter {counter}: Tolerance={tolerance}, Max # of iterations(PDF)={num_iters}, Zero padSize={padSize}, GM+WM RMSE={objective_value}, wRMSE:{wRMSE}")
 
     # Data to save
     sidecar_data = {
@@ -186,7 +216,8 @@ def pdf_optimizer(x):
         'Zero padSize': float(padSize),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
-        'objective_value': float(objective_value)
+        'objective_value': float(objective_value),
+        'wRMSE': float(wRMSE)
     }
 
     # Increase counter
@@ -201,16 +232,17 @@ def pdf_optimizer(x):
     rawBBO = str(objective_value)
     x.setBBO(rawBBO.encode("UTF-8"))
 
+
     return 1
 
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 2",
-    "BB_INPUT_TYPE (R I)",
+    "DIMENSION 1",
+    "BB_INPUT_TYPE (I)",
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 200",
-    "DISPLAY_DEGREE 2",
+    "MAX_BB_EVAL 100",
+    "DISPLAY_DEGREE 1",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
     "VNS_MADS_SEARCH true", # Optional Variable Neighborhood Search
@@ -223,16 +255,16 @@ nomad_params = [
 # We select based on the experience and complexity of field variations
 # Begin:
 start_time = time.time()
-x0 = [0.1, 40] # Recommended by SEPIA (for brain)
+x0 = [40] # Recommended by SEPIA (for brain)
 
-lb = [2e-6, 0]
+lb = [1]
 
-ub=[0.5, 100]
+ub=[100]
 
 counter = 0
 
-first_line = "BGFR optimization of PDF @SNR 70 fixing iterations to 200:"
-configure_experiment_run("RMSE_test1_onlySC_maxiter200", first_line)
+first_line = "BGFR opt SNR 30, Pad size opt, Tol: 0.1 (def) and # iter 250 with noise SD-> Displaying error_term for CG_TOL : \n"
+configure_experiment_run("debug_tol/test1", first_line)
 best_obj_value = float('inf')
 load_groun_truth_data()
 
@@ -245,3 +277,12 @@ print("\nNOMAD results \n" + output + " \n")
 end_time = time.time()
 elapsed_time = end_time - start_time
 print(f"Optimization complete in: {elapsed_time:.3f} seconds")
+
+results_df = pd.DataFrame(results_vector)
+
+plt.plot(results_df["num_iters"], results_df["wRMSE"], marker="o")
+plt.xlabel("Iteration")
+plt.ylabel("wRMSE")
+plt.title("NOMAD search trajectory")
+plt.grid(True)
+plt.show()

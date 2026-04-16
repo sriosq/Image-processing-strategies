@@ -76,7 +76,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_60/iter_fansi/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_real/iter_fansi/{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -85,7 +85,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_60\iter_fansi/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_real\iter_fansi/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
@@ -135,11 +135,11 @@ def FANSI_optimizer_weakH_off(x):
     # alpha1 2e-4
     # alpha0 = 2*alpha1 recommended
 
-    tol = 0.1 # Tolerance default is 0.1, heuristic definition 0.05
-    maxiter = 150 # Default is 150, extended to 300 for better convergence
+    tol = 0.05 # Tolerance default is 0.1, heuristic definition 0.05
+    maxiter = 20 # Default is 150, extended to 300 for better convergence
     lmbda = x.get_coord(0) # lambda is Gradient L1 penalty, this is how SEPIA handles it, I will submit a change to their repo cos its confusing because it says alpha1 when overlaying the cursos
     mu1 = x.get_coord(1) # Gradient consistency
-    mu2 = 1 # Fidelity consistency and should remain 1 - this just uses the magnitude
+    mu2 = 1 # Fidelity consistency should remain 1 - this just uses the magnitude
     solver = 'Non-linear'  # 'Non-linear' or 'Linear', we fix to non-linear
     constraint = 'TV'  # 'TGV' or 'TV', we fix to TV
     gmode = 'L1'  # 'Vector field', 'L1', 'L2',  or 'None' 
@@ -162,14 +162,14 @@ def FANSI_optimizer_weakH_off(x):
     
     print("Output FN used:", output_fn)
 
-    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\noisy\di_input_ref_avg_onlySC_lf_Hz_snr60.nii.gz") 
+    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\realistic_noise/di_opt_input_lf_ref_avg_onlySC_lf_Hz.nii.gz") 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_70\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_30\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
@@ -273,10 +273,12 @@ nomad_params_weak_OFF = [
     "DIMENSION 2",
     "BB_INPUT_TYPE (R R)", # lmbda, mu1
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 5",
+    "MAX_BB_EVAL 400",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
-    "DISPLAY_STATS BBE OBJ"
+    "DISPLAY_STATS BBE OBJ",
+    "VNS_MADS_SEARCH true", # Optional Variable Neighborhood Search
+    "VNS_MADS_SEARCH_TRIGGER 0.75" # Max desired ration of VNS BBevals over the total number of BBevals
 ]
 
 nomad_params_weak_ON = [
@@ -286,7 +288,9 @@ nomad_params_weak_ON = [
     "MAX_BB_EVAL 20",
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
-    "DISPLAY_STATS BBE OBJ"
+    "DISPLAY_STATS BBE OBJ",
+    "VNS_MADS_SEARCH true", # Optional Variable Neighborhood Search
+    "VNS_MADS_SEARCH_TRIGGER 0.75" # Max desired ration of VNS BBevals over the total number of BBevals
 ]
 # After careful revition of the paper + the code and the theory for FANSI, we'll fix the solver as well as the constraint
 # The gradient mode can also be fixed but studying how different modes affect the outcome would be interesting
@@ -351,8 +355,8 @@ counter = 0
 # After careful consideration and testing, we decide to use only Non-Linear solver
 # And begin with using TV 
 
-first_line = "Optimization results for FANSI @60 SNR, Non-Linear TV L1, weak harmonics OFF for default paramas RMSE:"
-configure_experiment_run("test2_for_def_rmse", first_line)
+first_line = "Optimization results for FANSI real SNR, Non-Linear TV L1, weak harmonics OFF w heuristic fixed params RMSE:"
+configure_experiment_run("test1_VNS_ON", first_line)
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 

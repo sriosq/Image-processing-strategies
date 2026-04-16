@@ -60,7 +60,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: "):
 
     print("GM and WM masks loaded successfully.")
 
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_70\iter_sharp/{test_fn}"
+    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_50\iter_sharp/{test_fn}"
     
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -69,7 +69,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: "):
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_70\iter_sharp/{test_fn}.txt"
+    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\bgfr_opt\snr_50\iter_sharp/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
@@ -82,20 +82,23 @@ def load_groun_truth_data():
     print("Ground truth local field loaded")
 
 
-def log_best_solution(obj_value, iteration, radius, thr, gm_rmse, wm_rmse):
+def log_best_solution(obj_value, iteration, smv, threshold, gm_rmse, wm_rmse, wRMSE=None):
     global best_obj_value
     total_rmse = gm_rmse + wm_rmse
+
     if obj_value <= best_obj_value:
+        out_text = f"Iter #{iteration}: SMV radius: {smv}, Threshold: {threshold} || GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse} | RMSE: {total_rmse}"
+        out_text = out_text + "| wRMSE: " + str(wRMSE) + "\n" 
         if obj_value == best_obj_value:
             print("Found a solution with the same objective value, but different parameters.")
             with open(txt_file_path, 'a') as file:
-                file.write(f"#Iter: {iteration}: OBJ {obj_value} // SMV radius: {radius}, Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
+                file.write(out_text)
 
         best_obj_value = obj_value
         print(f"New best solution found: {obj_value}")
         
         with open(txt_file_path, 'a') as file:
-            file.write(f"#Iter {iteration}: OBJ {obj_value} // SMV radius: {radius}, Threhsold: {thr}, GM RMSE: {gm_rmse}, WM RMSE: {wm_rmse}\n")
+            file.write(out_text)
 
 def sharp_optimizer(x):
     global counter
@@ -103,8 +106,8 @@ def sharp_optimizer(x):
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
 
-    radius = x.get_coord(0)
-    thr = x.get_coord(1)
+    radius = 1
+    thr = x.get_coord(0)
 
     iteration_fn = f"sharp_run{counter}/"
 
@@ -117,7 +120,7 @@ def sharp_optimizer(x):
     print("Output FN used:", output_fn)
 
     #custom_fm_path = str(r"E:\msc_data\sc_qsm\new_gauss_sims\mrsim_outpus\cropped_ideal\fm_tests\test1_simple/B0.nii")
-    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_70\fm_tests\test1_simple\B0.nii")
+    custom_fm_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs/custom_params_snr_50\fm_tests\test1_simple\B0.nii")
     # We can test using test1_simple or test2_msk_apply, the difference is that the second one has a mask applied and the first one does not
     custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
     mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks/only_sc_crop.nii.gz")
@@ -162,18 +165,29 @@ def sharp_optimizer(x):
     print(f"  RMSE: {wm_rmse:.5f}")
     print("########################")
 
-    # Compute mean fields within masks
-    #gm_mean = np.mean(local_field_data[gm_mask_data == 1])
-    #print("GM_mean: ", gm_mean)
-    #wm_mean = np.mean(local_field_data[wm_mask_data == 1])
-    #print("WM_mean: ", wm_mean)
+    # Compute loss of voxels in WM and GM
+    tot_gm_voxels = np.sum(gm_mask_data == 1)
+    tot_wm_voxels = np.sum(wm_mask_data == 1)
+    tot_voxels = tot_gm_voxels + tot_wm_voxels
+    
+    valid_voxels = local_field_data != 0
+    
+    kept_gm_voxels = np.sum((gm_mask_data > 0) & valid_voxels)
+    kept_wm_voxels = np.sum((wm_mask_data > 0) & valid_voxels)
 
-    # Objective: Maximize the difference between GM and WM means
-    # PyNomad minimizes, so return negative to maximize
+    gm_retention = kept_gm_voxels / tot_gm_voxels # Fraction kept in GM  (0 to 1)
+    wm_retention = kept_wm_voxels / tot_wm_voxels # Fraction kept in WM (0 to 1)
+
+    retention_coeff = (kept_gm_voxels + kept_wm_voxels)/(tot_voxels) # Fraction 0 to 1 for total kept voxels
+
     objective_value = gm_rmse + wm_rmse
-    log_best_solution(objective_value, counter, radius, thr, gm_rmse, wm_rmse)
 
-    print(f"Iter {counter}: Radius: {radius}, Threshold: {thr}, GM+WM RMSE = {objective_value}")
+    wRMSE = objective_value / retention_coeff
+
+    objective_value = gm_rmse + wm_rmse
+    log_best_solution(objective_value, counter, radius, thr, gm_rmse, wm_rmse, wRMSE=wRMSE)
+
+    print(f"Iter {counter}: Radius: {radius}, Threshold: {thr}, GM+WM RMSE = {objective_value}, wRMSE: {wRMSE}")
 
     # Data to save
     sidecar_data = {
@@ -182,7 +196,8 @@ def sharp_optimizer(x):
         'Threshold': float(thr),
         'wm_RMSE': float(wm_rmse),
         'gm_RMSE': float(gm_rmse),
-        'objective_value': float(objective_value)
+        'objective_value': float(objective_value),
+        'wRMSE': float(wRMSE)
     }
 
     # Increase counter
@@ -202,8 +217,8 @@ def sharp_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 2",
-    "BB_INPUT_TYPE (I R)",
+    "DIMENSION 1",
+    "BB_INPUT_TYPE (R)",
     "BB_OUTPUT_TYPE OBJ",
     "MAX_BB_EVAL 120",
     "DISPLAY_DEGREE 2",
@@ -220,15 +235,15 @@ nomad_params = [
 # The threshold parameter is to truncate k-space data, in the code it defaults to 0 but SEPIA defaults to 0.03
 # Begin:
 start_time = time.time()
-x0 = [4, 0.03] # Recommended by SEPIA (for brain)
+x0 = [0.03] # Recommended by SEPIA (for brain)
 
-lb = [1, 0]
+lb = [0]
 
-ub=[12, 0.1]
+ub=[0.1]
 
 counter = 0
 
-first_line = "BGFR optimization of SHARP @SNR 70:"
+first_line = "BGFR optimization of SHARP, SMV=1 @SNR 50:"
 configure_experiment_run("RMSE_test1_VNS_ON", first_line=first_line)
 best_obj_value = float('inf')
 load_groun_truth_data()
