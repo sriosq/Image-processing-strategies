@@ -60,6 +60,37 @@ def _add_paired_lines(
         )
 
 
+def _align_strip_points_to_box_width(collections, *, box_width: float, strip_dodge_width: float):
+    """Scale stripplot x offsets so dodged points sit over matching box centers."""
+    if strip_dodge_width <= 0:
+        return
+
+    scale = box_width / strip_dodge_width
+    if scale == 1:
+        return
+
+    for collection in collections:
+        offsets = collection.get_offsets()
+        if len(offsets) == 0:
+            continue
+
+        category_centers = offsets[:, 0].round()
+        offsets[:, 0] = category_centers + (offsets[:, 0] - category_centers) * scale
+        collection.set_offsets(offsets)
+
+
+def _center_strip_point_clouds(collections):
+    """Shift each stripplot point cloud so its mean x-position is centered."""
+    for collection in collections:
+        offsets = collection.get_offsets()
+        if len(offsets) == 0:
+            continue
+
+        category_center = round(float(offsets[:, 0].mean()))
+        offsets[:, 0] += category_center - offsets[:, 0].mean()
+        collection.set_offsets(offsets)
+
+
 def plot_box_strip(
     data: pd.DataFrame,
     x: str, 
@@ -78,6 +109,9 @@ def plot_box_strip(
     box_width: float = 0.6,
     strip_alpha: float = 0.8,
     strip_size: float = 5,
+    strip_jitter: float | bool = 0.08,
+    strip_dodge_width: float = 0.8,
+    center_strip_points: bool = True,
     dodge: bool = True,
     tick_fontsize: float = 16,
     title_fontsize: float = 18,
@@ -119,6 +153,7 @@ def plot_box_strip(
         ax=ax,
     )
 
+    existing_collection_count = len(ax.collections)
     sns.stripplot(
         data=data,
         x=x,
@@ -128,10 +163,21 @@ def plot_box_strip(
         hue_order=hue_order,
         palette=strip_palette if strip_palette is not None else palette,
         dodge=dodge,
+        jitter=strip_jitter,
         alpha=strip_alpha,
         size=strip_size,
         ax=ax,
     )
+
+    strip_collections = ax.collections[existing_collection_count:]
+    if center_strip_points and not dodge:
+        _center_strip_point_clouds(strip_collections)
+    elif dodge:
+        _align_strip_points_to_box_width(
+            strip_collections,
+            box_width=box_width,
+            strip_dodge_width=strip_dodge_width,
+        )
 
     handles, labels = _clear_axis_legend(ax)
 

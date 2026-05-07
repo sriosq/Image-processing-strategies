@@ -498,11 +498,13 @@ def algo_paired_ttest(
         results.append(
             {
                 group_col: group_value,
-                "mean_before": before.mean(),
-                "mean_after": after.mean(),
-                "mean_diff": (after - before).mean(), # With this we can verify improvement direction
+                "p_value": p_val,
                 "t_stat": stat,
-                "p_value": p_val, 
+                "mean_before": before.mean(),
+                "std_before": before.std(),
+                "mean_after": after.mean(),
+                "std_after": after.std(),
+                "mean_diff": (after - before).mean(), # With this we can verify improvement direction
                 "n_pairs": len(pivot), # Number of pairs used in the t-test
                 "value_col": value_col,
             }
