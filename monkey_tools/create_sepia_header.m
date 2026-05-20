@@ -124,3 +124,30 @@ matrixSize = [144, 144, 20]; % The "dimensions" of the image used
 voxelSize = [1.9792, 1.9792, 2, 3]; % Pixdim 
 
 save("db032_header.mat", 'B0', 'CF', 'B0_dir', "TE", "matrixSize", "voxelSize");
+
+%%
+% For human ex-vivo processing
+B0 = 7;
+B0_dir = [0;0;1];
+TE = (2.79 * (1:8)) * 1e-3; %
+CF = B0*42.58e6;
+matrixSize = [64,64,1];
+voxelSize = [0.1562, 0.1562, 3];
+
+outpath = "/Users/mclogar/msc_data/exvivo_sc_qsm/seb_processing/human_header2.mat";
+
+save(outpath, 'B0', 'CF', 'B0_dir', "TE", "matrixSize", "voxelSize")
+
+%%
+% Load the .mat file
+S = load('/Users/mclogar/msc_data/exvivo_sc_qsm/human/mri/20170302/mwf/MET2data.mat');
+whos('-file', '/Users/mclogar/msc_data/exvivo_sc_qsm/human/mri/20170302/mwf/MET2data.mat')
+%%
+% Example: suppose the image is stored in S.img
+img = S.data;
+
+% Make sure datatype is appropriate
+img = single(img);
+
+% Create a simple NIfTI
+niftiwrite(img, '/Users/mclogar/msc_data/exvivo_sc_qsm/seb_processing/sub-01/mwf/mwf_MET2data.nii', 'Compressed', true);
