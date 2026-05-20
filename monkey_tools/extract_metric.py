@@ -4,6 +4,7 @@ import nibabel as nib
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy.stats import ttest_rel
 
 # This script automates metric extraction using spinal cord toolbox!
 # This helps creating the folders when they are not existant and also cleans up the final jupyternotebook + modular baby!
@@ -450,3 +451,63 @@ def calculate_rmse(input_map, gt_map, mask, gm_msk, wm_msk):
     global_rmse = np.sqrt(np.mean(pixel_wise_difference[mask==1] ** 2))
 
     return gm_rmse, wm_rmse, global_rmse
+
+
+def algo_paired_ttest(
+    data: pd.DataFrame,
+    value_col: str, # From what column we'll take the values to compare
+    *,
+    group_col: str = "algorithm",
+    subject_col: str = "subject",
+    config_col: str = "config",
+    before_label: str = "Brain-recommended",
+    after_label: str = "SC-optimized",
+) -> pd.DataFrame:
+    """
+    Run a paired t-test per group after pivoting paired observations by subject.
+    Using apriori knowled that the data will be organized so that there is a before vs after
+    and that they will be named Brain-recommended and SC-optimized respectively
+
+    Possible problems:
+    You need to make sure that there is exactly one "value_col" value 
+    for each algorithm, subject and config combination, otherwise the pivot fails.
+
+    You can use the .head() function to check the data before running the test.
+    """
+    results = []
+
+    for group_value in pd.unique(data[group_col]):
+        subset = data[
+            (data[group_col] == group_value)
+            & (data[config_col].isin([before_label, after_label]))
+        ].copy()
+
+        pivot = subset.pivot(
+            index=subject_col,
+            columns=config_col,
+            values=value_col,
+        ).dropna()
+
+        if before_label not in pivot.columns or after_label not in pivot.columns:
+            continue
+
+        before = pivot[before_label]
+        after = pivot[after_label]
+        stat, p_val = ttest_rel(before, after)
+
+        results.append(
+            {
+                group_col: group_value,
+                "p_value": p_val,
+                "t_stat": stat,
+                "mean_before": before.mean(),
+                "std_before": before.std(),
+                "mean_after": after.mean(),
+                "std_after": after.std(),
+                "mean_diff": (after - before).mean(), # With this we can verify improvement direction
+                "n_pairs": len(pivot), # Number of pairs used in the t-test
+                "value_col": value_col,
+            }
+        )
+
+    return pd.DataFrame(results)

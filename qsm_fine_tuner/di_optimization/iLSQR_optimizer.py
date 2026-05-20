@@ -113,9 +113,9 @@ def iLSQR_optimizer(x):
 
     #matrix_Size = [301, 351, 128]
     #voxelSize = [0.976562, 0.976562, 2.344]
-    tol = x.get_coord(0)
-    maxiter = x.get_coord(1)
-    reg_param = x.get_coord(2)
+    tol = 0.01
+    maxiter = 50
+    reg_param = x.get_coord(0)
     optimise_flag = 0
     
     iteration_fn = f"iLSQR_run{counter}/"
@@ -138,7 +138,9 @@ def iLSQR_optimizer(x):
     # Some algorithms use the magnitude for weighting! Should be input #2
     gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_30\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
-    sepia_weights_path = mask_filename
+    sepia_weights_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\fm_tests\Sepia_weights.nii.gz") # This is given from using ROMEO for FM estimation with SEPIA
+    # Test with and without to see if RMSE is affected.
+    #sepia_weights_path = mask_filename
     
     in1 = gt_local_field_path
     in2 = gauss_sim_ideal_mag_path 
@@ -199,7 +201,6 @@ def iLSQR_optimizer(x):
         'obj_rmse': float(objective_rmse),
         'noise_penalty': float(noise_penalty),
         'noisy_obj_value': float(noise_penalty_obj)
-        
     }
 
     # Increase counter
@@ -219,8 +220,8 @@ def iLSQR_optimizer(x):
 #############################################################################################################################################
 
 nomad_params = [
-    "DIMENSION 3",
-    "BB_INPUT_TYPE (R I R)",
+    "DIMENSION 1",
+    "BB_INPUT_TYPE (R)",
     "BB_OUTPUT_TYPE OBJ",
     "MAX_BB_EVAL 200",
     "DISPLAY_DEGREE 2",
@@ -235,17 +236,20 @@ nomad_params = [
 # Maximum number of iterations limits LSQR, we can go from 20 to 200 but this may increase the time of computation so its important to optimize!
 # Begin:
 start_time = time.time()
-x0 = [0.001, 100, 0.10581] # Recommended by SEPIA (for brain)
-# The L-curve analysis, gave: 0.10581 for lambda, first with this then on 2 iterations run with 0.13 to get brain-recommended RMSE
+x0 = [0.10581] # Recommended by SEPIA (for brain), Tolerance 1e-3, maxiter 100 & Lambda 0.13 - 
+#From L-curve analysis, gave: 0.10581 for lambda, first with this then on 2 iterations run with 0.13 to get brain-recommended RMSE
+# From manual tests, we can increase tolerance and decrease maxiter while also decreasing RMSE
+# Run once without weights and then with weights because inside QSM_gradRegul, they use the weighted mask for regularzation
 
-lb = [0.00000001, 20, 0.00001]
 
-ub = [0.1, 400, 1]
+lb = [0.00001]
+
+ub = [1]
 
 counter = 0
 noise_lambda = 0.5
-first_line = f"Optimization results for iLSQR optimizer, GT LF with realistic noise, only SC mask and penalized RMSE, lambda_noise = {noise_lambda}: \n"
-configure_experiment_run("RMSE_Lcurve_lambda_as_x0", first_line=first_line, lmbda=noise_lambda)
+first_line = f"Optimization results for iLSQR optimizer, GT LF with realistic noise, Tol=0.1 & maxiter=50, only SC mask, with Weights and penalized RMSE, lambda_noise = {noise_lambda}: \n"
+configure_experiment_run("fixed_tol_and_maxiter/RMSE_Lcurve_lambda_as_x0_with_weights", first_line=first_line, lmbda=noise_lambda)
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
