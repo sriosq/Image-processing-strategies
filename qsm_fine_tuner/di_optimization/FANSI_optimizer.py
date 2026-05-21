@@ -53,7 +53,7 @@ def create_chimap(in1, in2, in3, in4 , output_basename, mask_filename, tol, maxi
     'solver': solver,
     'constraint': constraint,   
     'gradient_mode': gmode,
-    'isGPU': 0,
+    'isGPU': 1,
     'isWeakHarmonic': isWeakHarmonic,
     'beta': beta, # Harmonic constraint
     'muh': muh # Harmonic consistency
@@ -295,8 +295,9 @@ def FANSI_optimizer_weakH_on(x):
     # Perhaps after adding noise then we could use it, I would try a couple optimizers with ON and assess if there is any benefit for the phantom
     # Then we add x.get_coord for both beta and muh
     isWeakHarmonic = '1'  # Fixed and unused when isWeakHarmonic = 0
-    beta = x.get_coord(2)   # Harmonic constraint
-    muh = x.get_coord(3)  # Harmonic consistency
+      # Harmonic consistency
+    muh = x.get_coord(2)   # Harmonic consistency
+    beta = muh*50 # Harmonic constraint
     
     iteration_fn = f"FANSI_run{counter}/"
 
@@ -427,8 +428,20 @@ nomad_params_weak_OFF = [
 ]
 
 nomad_params_weak_ON = [
-    "DIMENSION 4",
-    "BB_INPUT_TYPE (R R R R)", # lmbda, mu1, beta and muh
+    "DIMENSION 3",
+    "BB_INPUT_TYPE (R R R)", # lmbda, mu1, beta
+    "BB_OUTPUT_TYPE OBJ",
+    "MAX_BB_EVAL 1000",
+    "DISPLAY_DEGREE 2",
+    "DISPLAY_ALL_EVAL false",
+    "DISPLAY_STATS BBE OBJ",
+    "VNS_MADS_SEARCH true", # Optional Variable Neighborhood Search
+    "VNS_MADS_SEARCH_TRIGGER 0.75" # Max desired ration of VNS BBevals over the total number of BBevals
+]
+
+nomad_params_proportions = [
+    "DIMENSION 2",
+    "BB_INPUT_TYPE (I I)", # lmbda, mu1, beta
     "BB_OUTPUT_TYPE OBJ",
     "MAX_BB_EVAL 1000",
     "DISPLAY_DEGREE 2",
@@ -459,16 +472,23 @@ lb_weakOFF = [0.0000001, 0.0000002]
 ub_weakOFF = [0.1, 20]
 
 ######################################################################################
-x0_weakON = [0.0002, 1, 150, 3] # Recommended by SEPIA (for brain)
-# lambda, mu2, beta and muh
+x0_weakON = [0.0002, 1, 3] # Recommended by SEPIA (for brain)
+# lambda, mu2, and muh
 # Read comments on mu1 (being set to a proportion to lambda a.k.a, alpha1)
+# And comments on beta and muh proportion as weel
 
-lb_weakON = [0.000001, 0.1, 10, 0.03]
+lb_weakON = [0.000001, 0.1, 0.01]
 
-ub_weakON = [0.01, 10, 300, 30]
+ub_weakON = [0.01, 10, 100]
+
+######################################################################################
+x0_proportions = [100, 50] # mu1 is 100*lambda and beta is 50*muh, so now we see if there is a better proportion between them
+
+lb_proportions = [1, 1]
+ub_proportions = [1000, 1000]
 
 counter = 0
-# In total there will be 24 runs:
+# In total there are 24 possible solver constraitn g-mode combinations:
 
 # I_non-linear_TGV_vector_field_weakH_off Done
 # II_linear_TGV_vector_field_weakH_off Done
@@ -500,10 +520,11 @@ counter = 0
 # XXIV_linear_TV_vector_field_weakH_on
 
 # After careful consideration and testing, we decide to use only Non-Linear solver
-# And begin with using TV 
+# And begin with using TV
+# We'll be using L1 as gradient mode but the other methods are interesting as well. 
 
-first_line = "Optimization results for FANSI real SNR, Non-Linear TV L1, weak harmonics ON w/fixed tol and iterations RMSE:"
-configure_experiment_run("wH_on/test1_VNS_ON", first_line)
+first_line = "Optimization results for FANSI real SNR, Non-Linear TV L1, wH ON w/fixed tol and iterations w/ lambda & beta proportions RMSE:"
+configure_experiment_run("wH_on/test2_VNS_ON", first_line)
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
