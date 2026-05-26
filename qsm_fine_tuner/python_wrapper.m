@@ -14,10 +14,10 @@ sepia_addpath;
 disp("Begin from Python");
 
 input_py = struct();
-input_py(1).name = in1;
-input_py(2).name = in2;
-input_py(3).name = in3;
-input_py(4).name = in4;
+input_py(1).name = in1; % This is the total field input for BGFR or the local field for DI depending on the algorithm
+input_py(2).name = in2; % This is the magnitude usually for DI, haven't check if used duinr BGFR
+input_py(3).name = in3; % This is the weights for DI, also haven't check if used for BGFR
+input_py(4).name = in4; % This is the header for the QSM processing independent of step.
 
 disp("Input received");
 % Make sure radius_array is MATLAB-compatible (already double from Python)
