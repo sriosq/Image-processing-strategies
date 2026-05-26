@@ -295,7 +295,7 @@ def dict_of_algo_params(algo, step):
             'mu2': matlab.double(1),
             'solver': "Non-linear",
             'constraint': "TGV",
-            "gradient_mode": "L2 norm",
+            "gradient_mode": "L1 norm",
             "isGPU": 0,
             "isWeakHarmonic": 0
         }
@@ -306,14 +306,16 @@ def dict_of_algo_params(algo, step):
             "method": "FANSI",
             'tol': matlab.double(0.05),
             'maxiter': matlab.double(300),
-            'lambda': matlab.double(0.0018), # Gradient penalty 
-            'mu1': matlab.double(0.001), # Gradient consistency
-            'mu2': matlab.double(1),
+            'lambda': matlab.double(0.001), # Gradient penalty 
+            'mu1': matlab.double(1), # Gradient consistency
+            'mu2': matlab.double(1.3815), # Fidelity consistency
             'solver': "Non-linear",
             'constraint': "TGV",
-            "gradient_mode": "L2 norm",
-            "isGPU": 0,
-            "isWeakHarmonic": 0
+            "gradient_mode": "L1 norm",
+            "isGPU": 1, # This speeds up running
+            "isWeakHarmonic": 1,
+            "beta": matlab.double(5000), # Harmonic constraint
+            "muh": matlab.double(100) # Harmonic consistency
         }
             
     elif algo == "def_medi":
@@ -482,7 +484,7 @@ def bgfr_comp(fieldmap_path, header_path, mask_path, pipeline_id, outpath, noise
 
         # Now go to the next algo
 
-def di_comp(localfield_path, header_path, mask_path, pipeline_id, outpath, path_to_mag = None):
+def di_comp(localfield_path, header_path, mask_path, pipeline_id, outpath, path_to_mag = None, path_to_weights = None):
 
     eng = matlab.engine.start_matlab()
 
@@ -516,12 +518,15 @@ def di_comp(localfield_path, header_path, mask_path, pipeline_id, outpath, path_
         if os.path.exists(outpath_chimap):
             print(f"Output path {outpath_chimap} already exists, skipping algo: {algo_name}")
             continue
+        
         os.makedirs(outpath_chimap, exist_ok=True)
 
         eng.python_wrapper(localfield_path, 
                            path_to_mag if algo in ["def_medi", "opt_medi"] else "", 
-                           mask_path if algo in ["def_medi", "opt_medi"] else "",
-                           header_path , algo_name, outpath_chimap, mask_path, di_params, nargout = 0)
+                           path_to_weights if path_to_weights is not None else "",
+                           header_path, 
+                           algo_name, outpath_chimap, mask_path, di_params,  
+                           nargout = 0)
         
         # Now the subrutine for slicewise creation of a PNG with sct
         png_outpath = os.path.join(outpath, pipeline_id, f"{algo}/{algo}.png")
