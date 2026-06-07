@@ -8,6 +8,11 @@ __pycache__/
 # Nifti extensions
 *.nii
 *.nii.gz
+# Images
+*.png
+*.jpeg
+# Json files
+*.json
 
 # Distribution / packaging
 .Python
