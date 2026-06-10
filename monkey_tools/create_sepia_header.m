@@ -139,6 +139,18 @@ outpath = "/Users/mclogar/msc_data/exvivo_sc_qsm/seb_processing/human_header2.ma
 save(outpath, 'B0', 'CF', 'B0_dir', "TE", "matrixSize", "voxelSize")
 
 %%
+% For SC-QSM acquisition (chi_014)
+B0 = 3;
+B0_dir = [0;0;1];
+TE = [5, 10, 15, 20, 25, 30, 35] * 1e-3; %
+CF = B0 * 42.58e6;
+matrixSize = [448, 448, 16];
+voxelSize = [0.4464, 0.4464, 5];
+
+outpath = "/Users/mclogar/msc_data/invivo/chi_014/niftis/chi_014_2D_7meGRE_header.mat";
+
+save(outpath, 'B0', 'CF', 'B0_dir', "TE", "matrixSize", "voxelSize")
+%%
 % Load the .mat file
 S = load('/Users/mclogar/msc_data/exvivo_sc_qsm/human/mri/20170302/mwf/MET2data.mat');
 whos('-file', '/Users/mclogar/msc_data/exvivo_sc_qsm/human/mri/20170302/mwf/MET2data.mat')
