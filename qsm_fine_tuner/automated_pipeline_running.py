@@ -294,7 +294,7 @@ def dict_of_algo_params(algo, step):
             'mu1': matlab.double(0.02),
             'mu2': matlab.double(1),
             'solver': "Non-linear",
-            'constraint': "TGV",
+            'constraint': "TV",
             "gradient_mode": "L1 norm",
             "isGPU": 0,
             "isWeakHarmonic": 0
@@ -306,11 +306,11 @@ def dict_of_algo_params(algo, step):
             "method": "FANSI",
             'tol': matlab.double(0.05),
             'maxiter': matlab.double(300),
-            'lambda': matlab.double(0.001), # Gradient penalty 
+            'lambda': matlab.double(0.01), # Gradient penalty 
             'mu1': matlab.double(1), # Gradient consistency
             'mu2': matlab.double(1.3815), # Fidelity consistency
             'solver': "Non-linear",
-            'constraint': "TGV",
+            'constraint': "TV",
             "gradient_mode": "L1 norm",
             "isGPU": 1, # This speeds up running
             "isWeakHarmonic": 1,
@@ -481,6 +481,10 @@ def bgfr_comp(fieldmap_path, header_path, mask_path, pipeline_id, outpath, noise
         png_outpath = os.path.join(outpath, pipeline_id, f"{algo}/{algo}.png")
         lf_name = os.path.join(outpath, pipeline_id, f"{algo}/Sepia_localfield.nii.gz")
         call_deepseb(lf_name, png_outpath, "-3", "3", "bwr", maskpath=mask_path)
+        # Now, save the params in the folder because the config isn't getting saved in the same directory
+        json_outpath = os.path.join(outpath, pipeline_id, f"{algo}/{algo}_params.json")
+        with open(json_outpath, 'w') as json_file:
+            json.dump(bgfr_params, json_file, default=str) # Use default=str to handle non-serializable types like matlab.double
 
         # Now go to the next algo
 
@@ -522,7 +526,7 @@ def di_comp(localfield_path, header_path, mask_path, pipeline_id, outpath, path_
         os.makedirs(outpath_chimap, exist_ok=True)
 
         eng.python_wrapper(localfield_path, 
-                           path_to_mag if algo in ["def_medi", "opt_medi"] else "", 
+                           path_to_weights if algo in ["def_medi", "opt_medi"] else "", 
                            path_to_weights if path_to_weights is not None else "",
                            header_path, 
                            algo_name, outpath_chimap, mask_path, di_params,  
@@ -532,6 +536,11 @@ def di_comp(localfield_path, header_path, mask_path, pipeline_id, outpath, path_
         png_outpath = os.path.join(outpath, pipeline_id, f"{algo}/{algo}.png")
         lf_name = os.path.join(outpath, pipeline_id, f"{algo}/Sepia_Chimap.nii.gz")
         call_deepseb(lf_name, png_outpath, "-0.05", "0.05", "bwr", maskpath=mask_path)
+
+                # Now, save the params in the folder because the config isn't getting saved in the same directory
+        json_outpath = os.path.join(outpath, pipeline_id, f"{algo}/{algo}_params.json")
+        with open(json_outpath, 'w') as json_file:
+            json.dump(di_params, json_file, default=str) # Use default=str to handle non-serializable types like matlab.double
         
         print("Chi-map created! Calculate metrics and update parameters!")
 
