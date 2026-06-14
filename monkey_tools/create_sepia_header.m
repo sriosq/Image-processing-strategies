@@ -126,6 +126,19 @@ voxelSize = [1.9792, 1.9792, 2, 3]; % Pixdim
 save("db032_header.mat", 'B0', 'CF', 'B0_dir', "TE", "matrixSize", "voxelSize");
 
 %%
+% For SC-QSM acquisitions with 3D meGRE
+B0 = 3; % Magnetic Field Strength in Tesla
+B0_dir = [0; 0; 1]; % Direction of B0
+CF = 123248973; % Central Frequency
+TE = [6.93, 11.85, 16.85, 21.85, 26.85]; % In seconds 
+% Echo time or list of echo times
+matrixSize = [384, 384, 16]; % The "dimensions" of the image used
+voxelSize = [0.4427, 0.4427, 5]; % Pixdim 
+
+outpath = "/Users/mclogar/msc_data/invivo/chi_015/chi_15_3D_meGRE_header.mat";
+
+save(outpath, 'B0', 'CF', 'B0_dir', "TE", "matrixSize", "voxelSize");
+%%
 % For human ex-vivo processing
 B0 = 7;
 B0_dir = [0;0;1];
@@ -148,6 +161,20 @@ matrixSize = [448, 448, 16];
 voxelSize = [0.4464, 0.4464, 5];
 
 outpath = "/Users/mclogar/msc_data/invivo/chi_014/niftis/chi_014_2D_7meGRE_header.mat";
+
+save(outpath, 'B0', 'CF', 'B0_dir', "TE", "matrixSize", "voxelSize")
+
+%%
+% For SC-QSM acquisition (chi_015)
+% Here for the 2D we did different echoe times
+B0 = 3;
+B0_dir = [0;0;1];
+TE = [3.46, 9.20, 14.94, 20.68, 26.42] * 1e-3; %
+CF = B0 * 42.58e6;
+matrixSize = [448, 518, 16];
+voxelSize = [0.4464, 0.4464, 5];
+
+outpath = "/Users/mclogar/msc_data/invivo/chi_015/chi_015_2D_5meGRE_header.mat";
 
 save(outpath, 'B0', 'CF', 'B0_dir', "TE", "matrixSize", "voxelSize")
 %%

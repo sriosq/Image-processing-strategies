@@ -11,10 +11,13 @@
 DUB_NAME="chi_015"
 # Now, look at the scanner and take the name of the sequence you want to concatenatem
 # The meGRE sequences go into 2 sequences "n" for the mag and "n+1" for the phase
-SEQ_NAME="2D_7meGRE_no_custom_shim"
+# chi_015_3D_OLD_mgre_5TEs_C3_11_e1
+SEQ_NAME="3D_OLD_mgre_5TEs_C3" #6/8 2D_5meGRE_no_custom_shim_lowRes
+
+# /Users/mclogar/msc_data/SYNGO_TRANSFER/june_11th_data/finished_scan/3D_meGRE
 
 # Define the directory after running dcm2niix
-NIFTI_DIR="/Users/mclogar/msc_data/SYNGO_TRANSFER/rt_shim_nifti"
+NIFTI_DIR="/Users/mclogar/msc_data/SYNGO_TRANSFER/june_11th_data/finished_scan/3D_meGRE"
 
 MAG_SERIES=$(ls ${NIFTI_DIR}/${DUB_NAME}_${SEQ_NAME}_*_e1.nii.gz 2>/dev/null | grep -v '_ph' | sed "s/.*${SEQ_NAME}_\([0-9]*\)_e1\.nii\.gz/\1/")
 
