@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# For mac stuff
+*.DS_Store
+
 # C extensions
 *.so
 # Nifti extensions
