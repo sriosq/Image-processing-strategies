@@ -9,11 +9,13 @@ import numpy as np
 import nibabel as nib
 
 # ---- 1. DEFINE INPUTS --------------------------------------------------------
-mag_path  = r"E:\msc_data\sc_qsm\neuropoly_data\chi_014\chi_014\niftis\3D_5meGRE\chi_014_3D_5meGRE_mag.nii.gz"
-mask_path = r"E:\msc_data\sc_qsm\neuropoly_data\chi_014\chi_014\niftis\3D_5meGRE\chi_014_3D_5meGRE_sc_msk.nii.gz"
-out_path  = r"E:\msc_data\sc_qsm\neuropoly_data\chi_014\chi_014\qsm_processing\n_std_output\n_std.nii.gz"
+mag_path  = r"R:\soothsayer\sc_qsm\sc_qsm\swiss_data_mk2\QSM_processing\hc2\m1\hc2_m1_mag.nii.gz"
+mask_path = r"R:\soothsayer\sc_qsm\sc_qsm\swiss_data_mk2\QSM_processing\hc2\m1\hc2_m1_sc_msk.nii.gz"
+out_path  = r"R:\soothsayer\sc_qsm\sc_qsm\swiss_data_mk2\QSM_processing\hc2\m1\n_std_output\n_std.nii.gz"
 
 TEs_vec = np.array([0.00693, 0.01185, 0.01685, 0.02185, 0.02685])  # seconds
+# TEs for Swiss dataset:
+#TEs_vec = np.array([0.00685, 0.01085, 0.01485, 0.01885, 0.02285]) # Seconds
 
 # ---- 2. LOAD -----------------------------------------------------------------
 mag_nii  = nib.load(mag_path)

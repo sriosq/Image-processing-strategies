@@ -107,11 +107,12 @@ save("sct_100_qsm.mat", 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
 TE = [0.00685, 0.01085, 0.01485, 0.01885, 0.02285];
 B0 = 3;
 B0_dir = [0;0;1];
-CF = 123.249;
+CF = 12324900;
 matrixSize = [384, 384, 16];
 voxelSize = [0.5833, 0.5833, 5];
+outpath="R:\soothsayer\sc_qsm\sc_qsm\swiss_data_mk2\QSM_processing\swiss_header_mk2.mat";
 
-save("swiss_header_mk2_te_sec.mat", 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
+save(outpath, 'B0','CF','B0_dir',"TE", "matrixSize","voxelSize")
 
 %%
 % Values for GRE acq for chi-fitting project db0-032, db0-033 and db0-035
@@ -149,7 +150,7 @@ save("qsm_sc_phantom_custom_params.mat",'B0','CF','B0_dir',"TE", "matrixSize","v
 
 %% Testing headers
 % Now that we know that Sepia expects echo times in seconds
-TE = [6.85, 10.85, 14.85, 18.85, 22.85];
+TE = [6.85, 10.85, 14.85, 18.85, 22.85]*1e-3;
 B0 = 3;
 B0_dir = [0;0;1];
 CF = 127740000; % In Hz, B0 * gyromagnetic ratio
@@ -175,23 +176,20 @@ voxelSize = [0.625, 0.625, 5]; % Pixdim
 
 save("chi_003_m6_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
-%% Header for chi_004, we have 3 acq. protocols:
-% for m1, 2 &3 all have same echo train: [0.00693, 0.01185, 0.01685, 0.02185, 0.02685], 
-% matrixSize = [384, 384, 16], voxelSize = [0.4427, 0.4427, 5]
-% For chi_005 and chi_008 we have the same acquisition, so same header
-
-TE = [0.00693, 0.01185, 0.01685, 0.02185, 0.02685];
+%% Header for SC-QSM acq., we have 3 acq. protocols:
+%  
+TE = [0.00693, 0.01185, 0.01685, 0.02185, 0.02685]; % in seconds
 B0 = 3;
 B0_dir = [0;0;1];
-CF = 123249367; % In Hz, B0 * gyromagnetic ratio 123.249367 127740000
+CF = 123248973; % In Hz, B0 * gyromagnetic ratio 123.249367 127740000 123248973
+
 matrixSize = [384, 384, 16]; % The "dimensions" of the image used
 voxelSize = [0.4427, 0.4427, 5]; % Pixdim 
-
-save("chi_007_m1_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
+outpath= "R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_015\qsm_processing\chi_015_3D_meGRE_header_te_sec.mat";
+save(outpath,'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
 %% Header for Swiss 7T 
 % 
-
 TE = [0.00455, 0.00881, 0.01307, 0.01733, 0.02159];
 B0 = 7;
 B0_dir = [0;0;1];

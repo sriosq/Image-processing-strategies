@@ -130,6 +130,7 @@ def plot_box_strip(
     legend_loc: str = "upper left",
     tight_layout_rect: Sequence[float] | None = None,
     show: bool = True,
+    hide_x_axis: bool = False,
 ):
     """Create the boxplot + stripplot combination used across the notebooks."""
     created_figure = ax is None
@@ -216,6 +217,10 @@ def plot_box_strip(
         ax.set_ylabel(ylabel, fontsize=label_fontsize)
 
     ax.tick_params(axis="both", labelsize=tick_fontsize)
+    if hide_x_axis:
+        ax.set_xlabel("")
+        ax.set_xticklabels([])
+        ax.tick_params(axis="x", length=0)
 
     if ylim is not None:
         ax.set_ylim(ylim)
@@ -253,7 +258,9 @@ def plot_box_strip_by_group(
     show_legend: bool = False,
     tight_layout_rect: Sequence[float] | None = None,
     show: bool = True,
+    hide_x_axis: bool = False,
     **plot_kwargs,
+    
 ) -> list[tuple]:
     
     """
@@ -292,6 +299,7 @@ def plot_box_strip_by_group(
                 show_legend=show_legend,
                 tight_layout_rect=tight_layout_rect,
                 show=show,
+                hide_x_axis=hide_x_axis,
                 **plot_kwargs,
             )
         )
