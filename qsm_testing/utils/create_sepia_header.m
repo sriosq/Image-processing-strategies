@@ -176,16 +176,16 @@ voxelSize = [0.625, 0.625, 5]; % Pixdim
 
 save("chi_003_m6_header.mat",'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
-%% Header for SC-QSM acq., we have 3 acq. protocols:
+%% Header for SC-QSM acq. protocols:
 %  
 TE = [0.00693, 0.01185, 0.01685, 0.02185, 0.02685]; % in seconds
 B0 = 3;
 B0_dir = [0;0;1];
-CF = 123248973; % In Hz, B0 * gyromagnetic ratio 123.249367 127740000 123248973
+CF = 123248963; % In Hz, B0 * gyromagnetic ratio 123.249367 127740000 123248973  123248934 123248963
 
-matrixSize = [384, 384, 16]; % The "dimensions" of the image used
-voxelSize = [0.4427, 0.4427, 5]; % Pixdim 
-outpath= "R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_015\qsm_processing\chi_015_3D_meGRE_header_te_sec.mat";
+matrixSize = [384, 420, 16]; % The "dimensions" of the image used
+voxelSize = [0.4453, 0.4453, 5]; % Pixdim 
+outpath= "R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_024\qsm_processing\sub-13_siemens_coil_SEPIA_header.mat";
 save(outpath,'B0','CF','B0_dir',"TE", "matrixSize","voxelSize");
 
 %% Header for Swiss 7T 

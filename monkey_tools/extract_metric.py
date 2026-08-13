@@ -224,14 +224,18 @@ def single_algo_comp(dub, meas, algo_type, root_dir, test_folders, sc_msk_path, 
     # This function assumes that the test_folders only contains the same algo but different parameters
     # So we can compare the metrics along the vertebra levels instead of combining in to a whole mask metric
     for algo in test_folders:
-        map_path = None
         if algo_type == "bgfr":
             map_path = os.path.join(root_dir, algo, "Sepia_localfield.nii.gz")
         elif algo_type == "chi_map":
             map_path = os.path.join(root_dir, algo, "Sepia_Chimap.nii.gz")
 
-        elif map_path is None or not os.path.exists(map_path):
-            print(f"Map not found for {algo}, skipping...")
+        else:
+            raise ValueError(
+            f"Unknown algo_type: {algo_type!r}. "
+            "Expected 'bgfr' or 'chi_map'.")
+
+        if not os.path.exists(map_path):
+            print(f"Map not found for {algo}, skipping: {map_path}")
             continue
         
         map_img = nib.load(map_path)
@@ -253,9 +257,7 @@ def single_algo_comp(dub, meas, algo_type, root_dir, test_folders, sc_msk_path, 
             wm_mean_df = pd.DataFrame(extract_values_per_vertebrae(map_data, wm_msk_data, vertfile_data, participant_id=dub, tissue="WM", statistic="mean"))
 
             gm_median_df = pd.DataFrame(extract_values_per_vertebrae(map_data, gm_msk_data, vertfile_data, participant_id=dub, tissue="GM", statistic="median"))
-            wm_median_df = pd.DataFrame(extract_values_per_vertebrae(map_data, wm_msk_data, vertfile_data, participant_id=dub, tissue="WM", statistic="median"))
-            # Now, we create the DF with a column for each vert level and calculate the contrast, cnr and weighted cnr for each vert level for GM and WM together
-            vertl_lvl_df = pd.DataFrame()
+            wm_median_df = pd.DataFrame(extract_values_per_vertebrae(map_data, wm_msk_data, vertfile_data, participant_id=dub, tissue="WM", statistic="median"))            
             
             vertebrae = np.unique(vertfile_data)
             vertebrae = vertebrae[vertebrae > 0]

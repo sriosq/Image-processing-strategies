@@ -69,14 +69,14 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
     global gm_mask_data, wm_mask_data, iter_folder, txt_file_path, lambda_noise
 
     lambda_noise = lmbda
-    gm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_gm_crop.nii.gz")
+    gm_mask_img = nib.load(r"R:\soothsayer\sc_qsm\sc_qsm\final_gauss_sims\masks\sc_gm_crop.nii.gz")
     gm_mask_data = gm_mask_img.get_fdata()
 
-    wm_mask_img = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims/masks/sc_wm_crop.nii.gz")
+    wm_mask_img = nib.load(r"R:\soothsayer\sc_qsm\sc_qsm\final_gauss_sims\masks\sc_wm_crop.nii.gz")
     wm_mask_data = wm_mask_img.get_fdata()
 
     print("GM and WM masks loaded successfully.")
-    iter_folder = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt/snr_real/iter_fansi/{test_fn}"
+    iter_folder = rf"R:\soothsayer\sc_qsm\sc_qsm\final_gauss_sims\IV_feb_2026\chi_mapping_opt\snr_real\iter_fansi{test_fn}"
    
     if os.path.exists(iter_folder) and len(os.listdir(iter_folder)) > 0:
         print("Folder already exists and is not empty. Please delete the folder or choose a different name.")
@@ -85,7 +85,7 @@ def configure_experiment_run(test_fn, first_line="Optimization results: ", lmbda
         os.makedirs(iter_folder, exist_ok=True)
         print("Experiment folder created!")
 
-    txt_file_path = rf"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\chi_mapping_opt\snr_real\iter_fansi/{test_fn}.txt"
+    txt_file_path = rf"R:\soothsayer\sc_qsm\sc_qsm\final_gauss_sims\IV_feb_2026\chi_mapping_opt\snr_real\iter_fansi/{test_fn}.txt"
     with open(txt_file_path, 'w') as file:
         first_line_txt =  first_line + "\n"
         file.write(first_line_txt)
@@ -103,7 +103,7 @@ def load_groun_truth_chidist_data():
     # Now apply the offset to the ground truth map
     #chimap_ref_sc_avg_ = ground_truth_abs_chimap_data - avg_chi_sc_val
     
-    chimap_ref_sc_avg_ = nib.load(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\bgfr_gt_ref_avg_onlySC_gauss_chi_dist_crop.nii.gz").get_fdata()
+    chimap_ref_sc_avg_ = nib.load(r"R:\soothsayer\sc_qsm\sc_qsm\final_gauss_sims\IV_feb_2026\gt_data\bgfr_gt_ref_avg_onlySC_gauss_chi_dist_crop.nii.gz").get_fdata()
 
     print("Ground truth susceptibility map loaded")
 
@@ -279,8 +279,8 @@ def FANSI_optimizer_weakH_on(x):
     # alpha1 2e-4
     # alpha0 = 2*alpha1 recommended
 
-    tol = 0.05 # Tolerance default is 0.1, heuristic definition 0.05
-    maxiter = 300 # Default is 150, extended to 300 for better convergence
+    tol = 0.1 # Tolerance default is 0.1, heuristic definition 0.05
+    maxiter = 150 # Default is 150, extended to 300 for better convergence
     lmbda = x.get_coord(0) # lambda (also alpha1) is Gradient L1 penalty, this is how SEPIA handles it, I will submit a change to their repo cos its confusing because it says alpha1 when overlaying the cursos
     mu1 = 100*(lmbda) # Gradient consistency
     # Doing this because alpha1/mu1 controls the shrinkage threshold so its better to have them coupled so that NOMAD doesn't find weird things.
@@ -294,7 +294,7 @@ def FANSI_optimizer_weakH_on(x):
     # First we do with weak harmonic off, phantom shouldn't need weak ON?
     # Perhaps after adding noise then we could use it, I would try a couple optimizers with ON and assess if there is any benefit for the phantom
     # Then we add x.get_coord for both beta and muh
-    isWeakHarmonic = '1'  # Fixed and unused when isWeakHarmonic = 0
+    isWeakHarmonic = '0'  # Fixed and unused when isWeakHarmonic = 0
       # Harmonic consistency
     muh = x.get_coord(2)   # Harmonic consistency
     beta = muh*50 # Harmonic constraint
@@ -309,14 +309,14 @@ def FANSI_optimizer_weakH_on(x):
     
     print("Output FN used:", output_fn)
 
-    gt_local_field_path =str(r"E:\msc_data\sc_qsm\final_gauss_sims\feb_2026\gt_data\realistic_noise/di_opt_input_lf_ref_avg_onlySC_lf_Hz.nii.gz") 
+    gt_local_field_path =str(r"R:\soothsayer\sc_qsm\sc_qsm\final_gauss_sims\IV_feb_2026\gt_data\realistic_noise\di_opt_input_lf_ref_avg_onlySC_lf_Hz.nii.gz") 
     # Instead of using the output of the best optimized local field, we want to optimize the algorithm with the best possible local field
     # This is the gt susceptibility map convoluted with the dipole kernel that gives us the GT LF for the BGFR optimization!
-    custom_header_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
-    mask_filename = str(r"E:\msc_data\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
+    custom_header_path = str(r"R:\soothsayer\sc_qsm\sc_qsm\final_gauss_sims\III_november_2025\mrsim_outputs\qsm_sc_phantom_custom_params.mat")
+    mask_filename = str(r"R:\soothsayer\sc_qsm\sc_qsm\final_gauss_sims\masks\only_sc_crop.nii.gz")# str(r"E:\msc_data\sc_qsm\final_gauss_sims/masks\qsm_processing_msk_crop.nii.gz")
 
     # Some algorithms use the magnitude for weighting! Should be input #2
-    gauss_sim_ideal_mag_path = str(r"E:\msc_data\sc_qsm\final_gauss_sims\November_2025\mrsim_outputs\custom_params_snr_30\gauss_crop_sim_mag_pro.nii.gz")
+    gauss_sim_ideal_mag_path = str(r"R:\soothsayer\sc_qsm\sc_qsm\final_gauss_sims\III_november_2025\mrsim_outputs\custom_params_snr_30\gauss_crop_sim_mag_pro.nii.gz")
     # Some algorithms need weigths for noise distribution, we can use the mask as a replacement if we want fair comparison with other algorithms that dont use it
     sepia_weights_path = mask_filename
     
@@ -431,7 +431,7 @@ nomad_params_weak_ON = [
     "DIMENSION 3",
     "BB_INPUT_TYPE (R R R)", # lmbda, mu1, beta
     "BB_OUTPUT_TYPE OBJ",
-    "MAX_BB_EVAL 1000",
+    "MAX_BB_EVAL 10", #1000
     "DISPLAY_DEGREE 2",
     "DISPLAY_ALL_EVAL false",
     "DISPLAY_STATS BBE OBJ",
@@ -523,8 +523,8 @@ counter = 0
 # And begin with using TV
 # We'll be using L1 as gradient mode but the other methods are interesting as well. 
 
-first_line = "Optimization results for FANSI real SNR, Non-Linear TV L1, wH ON w/fixed tol and iterations w/ lambda & beta proportions RMSE:"
-configure_experiment_run("wH_on/test2_VNS_ON", first_line)
+first_line = "Optimization results for FANSI real SNR, Non-Linear TV L1, wH ON w/default tol and iterations for initial RMSE:"
+configure_experiment_run("wH_on/test_initial_rmse", first_line)
 best_obj_value = float('inf')
 load_groun_truth_chidist_data()
 
