@@ -1,0 +1,43 @@
+# Final README checklist
+
+- Explain the purpose and scope of the QSM GUI.
+- State that the workflow is participant-centred and output files are participant-prefixed.
+- Explain loading `*_qsm_project.json` to resume without rerunning earlier steps.
+- Explain milestone timestamps, the coloured progress bar, and the next-step message.
+- Explain the tab order and that users should complete and inspect each stage before continuing.
+- List supported operating systems, including Windows and macOS.
+- Explain how to create and activate the `qsm_gui` Conda environment.
+- Explain that the GUI must be launched from the environment containing MATLAB Engine for Python.
+- Give Windows MATLAB Engine installation commands.
+- Give macOS MATLAB Engine installation commands.
+- Explain how to find `matlabroot` for non-default MATLAB installations.
+- Link MATLAB/Python version compatibility documentation.
+- Explain how to verify `import matlab.engine` and start/stop MATLAB.
+- Explain that Julia and SCT must be installed separately and available on `PATH`.
+- Explain how to verify `julia`, `sct_deepseg`, `sct_maths`, `sct_label_utils`, and `sct_label_vertebrae`.
+- Explain how to configure the ROMEO script and SEPIA directory on the Settings tab.
+- Explain developer mode and the exact subprocess command log.
+- Document every acquisition/header field and its units.
+- Explain that echo times are entered in milliseconds and stored in seconds for SEPIA.
+- Explain the generated participant directory, JSON project file, JSON header, and MAT header.
+- Explain that masking outputs are stored in the participant `masking` directory.
+- Explain that meGRE SC and GM masks use the first magnitude echo.
+- Explain that WM is calculated as SC minus GM.
+- Explain the T1 spinal-cord segmentation step.
+- Explain the interactive disc-label viewer and label convention.
+- Explain how to select the first and last disc labels shown in the viewer.
+- Explain force-rerun behavior and which downstream outputs are invalidated.
+- Explain why the GUI extracts and validates a 3D first echo before running SCT.
+- Explain vertebral-level segmentation and its output filename.
+- State clearly that every mask and vertebral-level output requires manual inspection and correction when needed.
+- Explain the separate T1-space masking QC and meGRE-space registration QC approvals.
+- Explain meGRE-to-T1w registration, both normalized warp filenames, and nearest-neighbor label warping.
+- Explain both ROMEO fieldmap variants, phase-offset correction, `-k`, `-u`, milliseconds for ROMEO TE, and output folders.
+- Explain ROMEO's fixed `B0.nii` and `corrected_phase.nii` outputs and the participant-prefixed gzip copies.
+- Explain B0-only `sct_deepseb` PNG generation, `cmin`, `cmax`, `cbar`, and mask outlines.
+- Explain mandatory final fieldmap QC approval before BGFR and DI.
+- Emphasize that SEPIA stores TE in seconds while ROMEO receives TE in milliseconds.
+- Add screenshots after the interface stabilizes.
+- Add troubleshooting for missing commands, missing MATLAB Engine, and failed external tools.
+- Add citation and license requirements for MATLAB, SEPIA, ROMEO, SCT, and incorporated algorithms.
+- Add a complete worked participant example after all pipeline stages are implemented.

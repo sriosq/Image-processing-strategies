@@ -1,0 +1,6 @@
+# Local machine paths; use config.example.json as the public template.
+config.json
+
+__pycache__/
+*.py[cod]
+.pytest_cache/

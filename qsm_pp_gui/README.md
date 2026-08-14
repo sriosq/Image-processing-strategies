@@ -1,0 +1,262 @@
+# QSM Processing Pipeline GUI
+
+This is the first application shell for combining the validated QSM automation in
+`qsm_fine_tuner/automated_pipeline_running.py` with useful processing ideas from
+`sc_qsm`.
+
+The first milestone deliberately separates **machine configuration** from
+**pipeline logic**. Paths are saved in `qsm_pp_gui/config.json`. That file is
+visible and easy to edit, but ignored by Git because it contains paths specific
+to one computer. Copy `config.example.json` when configuring a new computer.
+
+## Installation
+
+MATLAB Engine for Python must be installed into the same Conda environment
+that runs the GUI. MATLAB R2024b supports Python 3.9 through 3.12, so this
+project uses Python 3.11.
+
+From the `Image-processing-strategies` repository root, create and activate the
+environment:
+
+```powershell
+conda env create -f qsm_pp_gui\environment.yml
+conda activate qsm_gui
+```
+
+The environment includes Tkinter and the Python packages needed for the GUI,
+NIfTI processing, visualization, numerical processing, and tests.
+
+Next, install MATLAB Engine into the active `qsm_gui` environment. For MATLAB
+R2024b installed in its default Windows location:
+
+```powershell
+Push-Location "C:\Program Files\MATLAB\R2024b\extern\engines\python"
+python -m pip install .
+Pop-Location
+```
+
+For the default MATLAB R2024b location on macOS:
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate qsm_gui
+python -m pip install "/Applications/MATLAB_R2024b.app/extern/engines/python"
+```
+
+If a different MATLAB release or installation directory is used, replace that
+path with `<matlabroot>\extern\engines\python`. The MATLAB release must support
+the Python version selected in `environment.yml`.
+
+Verify that the active environment can import the Engine and start MATLAB:
+
+```powershell
+python -c "import matlab.engine; eng = matlab.engine.start_matlab(); print(eng.version()); eng.quit()"
+```
+
+Do not run the GUI until this command succeeds. Installing MATLAB Engine into
+`base` or another environment does not make it available inside `qsm_gui`.
+
+Julia and Spinal Cord Toolbox are separate applications. Install them normally
+and make sure `julia` and `sct_deepseg` can be called from a newly opened
+terminal:
+
+```powershell
+julia --version
+sct_deepseg -h
+sct_deepseb -h
+```
+
+See MathWorks' documentation for [installing MATLAB Engine for
+Python](https://www.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html)
+and its [MATLAB/Python compatibility
+table](https://www.mathworks.com/support/requirements/python-compatibility.html)
+when preparing a computer with a different MATLAB release.
+
+## Running the GUI
+
+Activate the environment and run from the repository root:
+
+```powershell
+conda activate qsm_gui
+python -m qsm_pp_gui
+```
+
+### Loading and resuming a participant
+
+Use **Load project…** at the top of the application to select an existing
+`*_qsm_project.json`. The GUI repopulates the acquisition and masking fields,
+validates the saved SEPIA JSON and MATLAB headers, reconstructs milestone state
+from existing outputs, and reports both completed milestones and the next step.
+You do not need to rerun Inputs & header after restarting the application.
+
+The coloured bar is persistent across all tabs:
+
+- green with a check mark means the milestone is complete;
+- blue with an arrow identifies the next pipeline stage;
+- gray means the stage is still pending.
+
+Each important operation is recorded in the project JSON with its completion
+state and UTC timestamp. Older project files without milestone entries are
+updated automatically after their files are validated.
+
+Start on **Overview**, then use **Inputs & header** to initialize a participant.
+The application creates a participant directory and prefixes its SEPIA header
+and project file with the participant identifier. Clicking **Validate and create
+SEPIA headers** writes the JSON metadata, launches MATLAB through MATLAB Engine
+for Python, runs `utils/create_sepia_header.m`, and verifies the resulting `.mat`
+file before marking the step complete.
+
+Julia and Spinal Cord Toolbox commands must be available on the operating
+system's `PATH`. They are requirements rather than GUI settings. On the
+**Settings** tab, select:
+
+- ROMEO's `romeo.jl` script;
+- the SEPIA root directory.
+
+The Settings tab shows the current operating system, Python executable, active
+Conda environment, MATLAB Engine import status, and platform-appropriate setup
+commands. Environment changes take effect only after restarting the GUI from
+the corrected environment.
+
+Enable **Developer mode** on the Settings tab to show a subprocess log beneath
+the workflow. Before every SCT or ROMEO subprocess starts, the GUI prints the
+exact command with all paths and arguments. Normal progress messages remain
+visible whether developer mode is enabled or not. This preference is saved in
+the local `config.json`.
+
+## Masking workflow
+
+The Masks tab creates `<output-root>/<participant-id>/masking/` and runs each
+operation as a separate checkpoint:
+
+1. Extract the first echo from the selected 3D/4D meGRE magnitude and create SC
+   and GM masks using `sct_deepseg`.
+2. Create WM as SC minus GM using `sct_maths`.
+3. Segment the spinal cord in the selected T1-weighted image.
+4. Choose the first and last disc label, then open the interactive SCT viewer.
+5. Use those labels to create a T1-space vertebral-level segmentation.
+6. Manually open, inspect, and if necessary correct every SC, GM, WM, T1 SC,
+   and T1-space vertebral-level output. Explicitly record QC approval in the GUI.
+7. Register the first-echo meGRE to T1w using the meGRE and T1w SC masks, then
+   apply the inverse T1w-to-meGRE warp to the vertebral-level segmentation.
+8. Manually inspect and, if necessary, correct the final meGRE-space vertebral
+   labels before recording registration QC approval.
+
+The final outputs use participant-prefixed names and are recorded under the
+`masking` section of the participant project JSON. Existing non-empty outputs
+are reused so checked work is not silently overwritten.
+
+Enable **Force rerun selected step** to deliberately replace the output of the
+chosen action. Re-running the T1 cord mask or disc labels also removes the old
+vertebral-level result because it is no longer valid. The GUI always extracts
+and verifies a 3D first-echo magnitude before calling SCT; SCT segmentation
+models do not accept the original 4D multi-echo magnitude.
+
+More specifically:
+
+- forcing meGRE masks regenerates the first echo and the SC, GM, and WM masks;
+- forcing the T1 SC mask invalidates the vertebral-level result;
+- forcing disc labels replaces the labels and invalidates vertebral levels;
+- forcing vertebral levels replaces only the vertebral-level result.
+
+After a rerun, milestones are refreshed from the files on disk so an invalidated
+downstream result is shown as incomplete.
+
+Manual QC is mandatory. File creation alone does not complete the masking stage,
+and registration cannot start until meGRE and T1w mask QC is approved. The GUI
+cannot determine whether anatomical boundaries or vertebral labels are correct;
+the NIfTI outputs must be opened in an appropriate viewer and corrected when
+needed. The masking stage becomes green only after the warped meGRE-space labels
+receive their own manual QC approval.
+
+Registration outputs are stored in `masking/register/`:
+
+```text
+warp_megre2t1w.nii.gz
+warp_t1w2megre.nii.gz
+<id>_space-T1w_desc-meGRE_registered.nii.gz
+<id>_space-meGRE_desc-SC_vertlevels_dseg.nii.gz
+```
+
+The pre-registration label image is named
+`<id>_space-T1w_desc-SC_vertlevels_dseg.nii.gz`. The final transformation uses
+nearest-neighbor interpolation (`-x nn`) to preserve discrete vertebral labels.
+
+## Field mapping
+
+The Field map tab uses the original 4D magnitude and phase NIfTIs. It verifies
+that their shapes match, that the number of volumes equals the number of echo
+times, and that the 3D meGRE SC mask matches their spatial dimensions. The
+SEPIA header retains echo times in seconds, but the GUI multiplies them by 1000
+because ROMEO requires echo times in **milliseconds**.
+
+Phase-offset correction can be `bipolar`, `on`, or `off`. Both ROMEO variants
+receive the meGRE mask through `-k`:
+
+- **masked fieldmap** adds `-u`;
+- **unmasked fieldmap** omits `-u`.
+
+Outputs are stored alongside `masking/` under the participant directory:
+
+```text
+fieldmap/
+├── masked_fieldmap/
+│   ├── B0.nii
+│   ├── corrected_phase.nii
+│   ├── <id>_desc-b0_fieldmap.nii.gz
+│   └── <id>_desc-corrected_phase.nii.gz
+└── unmasked_fieldmap/
+    ├── B0.nii
+    ├── corrected_phase.nii
+    ├── <id>_desc-b0_fieldmap.nii.gz
+    └── <id>_desc-corrected_phase.nii.gz
+```
+
+ROMEO's `-o` argument receives the variant directory, not a filename. ROMEO
+writes the fixed raw names `B0.nii` and `corrected_phase.nii`; the GUI preserves
+those files and creates gzip-compressed, participant-prefixed copies. The Field
+map milestone is complete only when both compressed products exist for both
+variants.
+
+For quantitative visual QC, enter `cmin`, `cmax`, and a Matplotlib colorbar
+name such as `bwr`, then select **Create masked and unmasked B0 QC PNGs**. The
+GUI runs the reusable `utils.deepseb.call_deepseb` helper once for each B0 map,
+using the meGRE mask as an outline. Corrected phase is not rendered. Each PNG
+has the same basename as its participant-prefixed B0 map:
+
+```text
+<id>_desc-b0_fieldmap.nii.gz
+<id>_desc-b0_fieldmap.png
+```
+
+Finally, manually inspect both B0 maps and PNGs and select **Record fieldmap QC
+approval**. This is a separate `fieldmap_qc` milestone and is the readiness gate
+for BGFR and DI. Re-running either ROMEO variant invalidates the PNG and final
+QC milestones.
+
+The MATLAB executable is intentionally not requested. The current Python code
+uses MATLAB Engine for Python, so the relevant check is whether `matlab.engine`
+can be imported. SEPIA paths will be added to each MATLAB engine session from
+this configuration.
+
+`sct_deepseg` belongs to Spinal Cord Toolbox (SCT), not to SEPIA. It creates
+spinal-cord or gray-matter segmentations and is relevant to the masking workflow
+borrowed from `sc_qsm`. It can remain as `sct_deepseg` when SCT is available on
+`PATH`. It is optional until those masking stages are enabled.
+
+## MATLAB utility
+
+`utils/create_sepia_header.m` converts the JSON metadata produced by the GUI
+into the MATLAB `.mat` header consumed by SEPIA. It accepts either the generated
+`*_sepia_header.json` or `*_qsm_project.json`:
+
+```matlab
+header_path = create_sepia_header("sub-001_sepia_header.json");
+```
+
+An explicit output path is optional:
+
+```matlab
+header_path = create_sepia_header("sub-001_qsm_project.json", ...
+    "sub-001_custom_header.mat");
+```
