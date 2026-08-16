@@ -243,7 +243,20 @@ class QsmApp(tk.Tk):
         ttk.Checkbutton(parent, text="Developer mode: show exact subprocess commands", variable=self.developer_mode, command=self._toggle_developer_mode).grid(row=12, column=0, columnspan=3, sticky="w", pady=(14, 0))
 
     def _browse(self, name: str, kind: str) -> None:
-        selected = filedialog.askdirectory() if kind == "directory" else filedialog.askopenfilename(filetypes=[("NIfTI or scripts", "*.nii *.nii.gz *.jl *.exe"), ("All files", "*.*")])
+        if kind == "directory":
+            selected = filedialog.askdirectory(parent=self)
+        else:
+            options: dict[str, object] = {"parent": self}
+            # Older Aqua Tk releases can abort inside AppKit when a native
+            # open panel receives compound-extension filters such as *.nii.gz.
+            # An NSException terminates the process before Python can catch it,
+            # so leave the native macOS panel unfiltered on those releases.
+            if sys.platform != "darwin":
+                options["filetypes"] = [
+                    ("NIfTI or scripts", "*.nii *.nii.gz *.jl *.exe"),
+                    ("All files", "*.*"),
+                ]
+            selected = filedialog.askopenfilename(**options)
         if selected:
             self.values[name].set(selected)
 
@@ -527,10 +540,16 @@ class QsmApp(tk.Tk):
         self._save_settings()
 
     def _load_project_dialog(self) -> None:
-        selected = filedialog.askopenfilename(
-            title="Load QSM project",
-            filetypes=[("QSM project JSON", "*_qsm_project.json"), ("JSON files", "*.json")],
-        )
+        options: dict[str, object] = {
+            "parent": self,
+            "title": "Load QSM project",
+        }
+        if sys.platform != "darwin":
+            options["filetypes"] = [
+                ("QSM project JSON", "*_qsm_project.json"),
+                ("JSON files", "*.json"),
+            ]
+        selected = filedialog.askopenfilename(**options)
         if not selected:
             return
         self.current_project_path = Path(selected)

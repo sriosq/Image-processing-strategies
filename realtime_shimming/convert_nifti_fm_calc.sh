@@ -36,20 +36,14 @@ if [[ -n "${SELECTED_SERIES}" && ! "${SELECTED_SERIES}" =~ ^[0-9]+$ ]]; then
     exit 1
 fi
 
-# Coil profile directory hard-coded for now
-COIL_PROFILES_DIR="/Users/mclogar/msc_data/SYNGO_TRANSFER/coil_profiles_july28_2026"
-COIL_PATH="${COIL_PROFILES_DIR}/coil_profiles_NP15.nii.gz"
-COIL_CONFIG_PATH="${COIL_PROFILES_DIR}/NP15_config.json"
-
 # Output directories
 NIFTI_DIR="${DCM_DIR}/rt_shim_nifti"
 CONCAT_DIR="${NIFTI_DIR}/concat"
 MASK_DIR="${NIFTI_DIR}/masking"
 FMAP_DIR="${NIFTI_DIR}/fmap"
-SHIM_COEFF_DIR="${NIFTI_DIR}/shim_coeff"
 
 
-mkdir -p "${NIFTI_DIR}" "${CONCAT_DIR}" "${MASK_DIR}" "${FMAP_DIR}" "${SHIM_COEFF_DIR}" #-p to pass if already there
+mkdir -p "${NIFTI_DIR}" "${CONCAT_DIR}" "${MASK_DIR}" "${FMAP_DIR}" #-p to pass if already there
 
 echo "Converting DICOMs to NIfTIs"
 
@@ -165,83 +159,4 @@ julia /Users/mclogar/ROMEO.jl/romeo.jl \
 	-m "${MAG_FN}" \
 	-B \
 	-t "${TEs}" \
-	--phase-offset-correction bipolar \
 	-o "${FMAP_DIR}" 
-
-mage1_json="${NIFTI_DIR}/${DUB_NAME}_${SEQ_NAME}_${MAG_SER}_e1.json"
-cp "${mage1_json}" "${FMAP_DIR}/B0.json"
-
-# A B0 will be created we can now:
-gzip "${FMAP_DIR}/B0.nii"
-FMAP="${FMAP_DIR}/B0.nii.gz"
-
-echo "
-Running spinal cord toolbox with command: 
-
-sct_deepseg spinalcord -i "${mage1}" -o "${sc_msk_fn}"
-"
-
-sct_deepseg spinalcord \
-    -i "${mage1}" \
-    -o "${sc_msk_fn}"
-
-sct_maths \
-    -i "${sc_msk_fn}" \
-    -shape disk \
-    -dilate 10 \
-    -dim 2 \
-    -o "${shim_msk_fn}"
-
-# VISUALIZE
-fsleyes \
-    "${mage1}" -cm greyscale \
-	"${FMAP}" -cm greyscale \
-    "${shim_msk_fn}" -cm red -a 70.0 &
-
-# To create the shim coefficients we need to create a json file and add some stuff
-# Just copy the json file from any echo of the fieldmap gre (so phase or mag data)
-#
-
-# Calculate new shim coefficients
-
-if [[ "${ACQ_TYPE}" == "2D" ]]; then
-echo "Using 2D Shimming dynamic shimming"
-
-    st_b0shim dynamic \
-        --fmap "${FMAP}" \
-        --target "${mage1}" \
-        --mask "${shim_msk_fn}" \
-        --scanner-coil-order "0,1" \
-        --optimizer-method "pseudo_inverse" \
-        --output-file-format-scanner "slicewise-hrd" \
-        --output "${SHIM_COEFF_DIR}"
-
-elif [[ "${ACQ_TYPE}" == "3D" ]]; then
-echo "Using 3D Shimming dynamic shimming"
-
-    st_b0shim dynamic \
-        --fmap "${FMAP}" \
-        --target "${mage1}" \
-		--slices volume \
-        --mask "${shim_msk_fn}" \
-        --coil "${COIL_PATH}" "${COIL_CONFIG_PATH}" \
-        --optimizer-method "least_squares" \
-        --output-file-format-coil "chronological-coil" \
-        --output "${SHIM_COEFF_DIR}" 
-
-elif [[ "${ACQ_TYPE}" == "3D_reg" ]]; then
-echo "Using 3D Shimming dynamic shimming"
-
-    st_b0shim dynamic \
-        --fmap "${FMAP}" \
-        --target "${mage1}" \
-		--slices volume \
-        --mask "${shim_msk_fn}" \
-        --coil "${COIL_PATH}" "${COIL_CONFIG_PATH}" \
-        --optimizer-method "least_squares" \
-        --output-file-format-coil "chronological-coil" \
-		--regularization-factor 0.3 \
-        --output "${SHIM_COEFF_DIR}" 
-
-fi
-

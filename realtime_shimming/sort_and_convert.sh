@@ -1,0 +1,3 @@
+DCM_DIR=$1
+DUB_NAME=$2
+SEQ_NAME=$3

@@ -32,3 +32,32 @@ for SER in $PH_SERIES; do
     PH_ECHOES=$(ls ${NIFTI_DIR}/${DUB_NAME}_${SEQ_NAME}_${SER}_e*_ph.nii.gz 2>/dev/null | tr '\n' ' ')
     st_image concat $PH_ECHOES -o "${NIFTI_DIR}/${DUB_NAME}_${SEQ_NAME}_${SER}_ph.nii.gz" --axis 3
 done
+
+
+# old way fo creating fmap
+nano "fm_tests/test1_unmskd/B0.json"
+'''
+Copy and paste the following content in the json file but before open the .json file of any echo from the mag or ph
+REMEMBER: Change both the shim settings and the table position according to the json, and the digits of the Imaging frequency
+{
+    "Manufacturer": "Siemens",
+    "ManufacturersModelName": "Prisma_fit",
+    "DeviceSerialNumber": "167006",
+    "ImagingFrequency": "123.248962",
+	"ShimSetting": [
+		586,
+		-7466,
+		-9331,
+		-1349,
+		74,
+		1972,
+		570,
+		60	],
+	"TablePosition": [
+		0,
+		0,
+		-11	],
+    "PatientPosition": "HFS",
+    "SoftwareVersions": "syngo MR XA60"
+}
+'''
