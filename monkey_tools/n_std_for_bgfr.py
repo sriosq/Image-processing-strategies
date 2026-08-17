@@ -9,9 +9,9 @@ import numpy as np
 import nibabel as nib
 
 # ---- 1. DEFINE INPUTS --------------------------------------------------------
-mag_path  = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_024\acdc_testing\chi_024_MC_Shim_no_reg_5megre_mag.nii.gz"
-mask_path = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_024\acdc_testing\chi_024_custom_sc_msk.nii.gz"
-out_path  = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_024\acdc_testing\n_std_output\mc_shim_n_std.nii.gz"
+mag_path  = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_26\qsm_processing\mc\w_reg\chi_026_3D_MCShim_w_reg_5megre_C3_mag.nii.gz"
+mask_path = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_26\qsm_processing\mc\chi_026_mc_sc_msk.nii.gz"
+out_path  = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_26\qsm_processing\mc\w_reg\n_std_output/n_std.nii.gz"
 
 TEs_vec = np.array([0.00693, 0.01185, 0.01685, 0.02185, 0.02685])  # seconds
 # TEs for Swiss dataset:

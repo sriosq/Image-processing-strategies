@@ -81,6 +81,13 @@ conda activate qsm_gui
 python -m qsm_pp_gui
 ```
 
+The module form above is preferred. Running the package directory directly is
+also supported for convenience:
+
+```powershell
+python qsm_pp_gui
+```
+
 ### Loading and resuming a participant
 
 Use **Load project…** at the top of the application to select an existing
@@ -228,6 +235,70 @@ has the same basename as its participant-prefixed B0 map:
 <id>_desc-b0_fieldmap.nii.gz
 <id>_desc-b0_fieldmap.png
 ```
+
+Changing `cmin`, `cmax`, or `cbar` automatically regenerates both PNGs, even if
+PNG files already exist. With unchanged settings, existing PNGs are reused
+unless **Force rerun fieldmap or PNG output** is enabled. In Developer mode,
+confirm the effective values in the exact logged `sct_deepseb` command.
+
+## Noise SD and weights
+
+After field-map QC, open **4 Noise & weights**. The GUI loads the original 4D
+magnitude, the meGRE SC mask, and the echo times in seconds from the saved SEPIA
+header. **Create noise SD and DI weights** writes both maps to the participant's
+`noise_weights` folder. Existing non-empty maps are reused unless **Force rerun
+both maps** is selected. A rerun invalidates noise/weights QC and downstream BGFR
+approval. Open both NIfTI maps, inspect/correct the inputs if needed, select the
+manual-QC checkbox, and record approval before BGFR.
+
+## Background-field removal
+
+The **5 BGFR** procedure menu provides:
+
+- `comp_bgfr`: all five default and all five optimized algorithms
+- `default`: PDF, LBV, SHARP, RESHARP, and VSHARP default parameters
+- `optimized`: the corresponding optimized parameters
+
+BGFR uses the selected B0 fieldmap, MATLAB SEPIA header, meGRE SC mask, and noise
+SD map. The SEPIA directory comes from Settings; MATLAB Engine is loaded only
+when the run starts. Each algorithm receives its own folder containing the local
+field, a portable parameter JSON, and a QC PNG. The local-field display range is
+taken directly from the BGFR `cmin`, `cmax`, and `cbar` controls. Enable developer
+mode to see each conceptual `python_wrapper(...)` call and every exact
+`sct_deepseb` subprocess command. Force rerun recreates the selected procedure
+and invalidates BGFR QC. Manually inspect every local field/PNG before recording
+BGFR approval.
+
+The reusable `utils.deepseb.call_deepseb` function is intentionally independent
+of map type: fieldmaps, BGFR local fields, and later chi maps can each supply
+their own input, output, display limits, colorbar, and optional outline mask.
+
+## SEPIA external toolboxes
+
+- Download the external QSM toolboxes required by the algorithms you intend to
+  run, including MEDI, STI Suite, FANSI, SEGUE, MRI Susceptibility Calculation,
+  and mritools where applicable. Preserve each toolbox's original directory
+  structure and configure its location in SEPIA's
+  `SpecifyToolboxesDirectory.m`/universal-variables configuration. Add only the
+  SEPIA home directory to MATLAB's path: `python_wrapper.m` calls
+  `sepia_addpath`, which lets SEPIA activate the configured dependency for the
+  selected algorithm. Do not rely on machine-specific toolbox paths embedded in
+  Python. Check each external toolbox's own license before redistribution.
+
+See the official [SEPIA installation and dependency instructions](https://sepia-documentation.readthedocs.io/en/latest/getting_started/Installation.html).
+
+## Dipole inversion
+
+After BGFR QC, select a local-field result in **6 Dipole inversion**. The GUI
+passes the original magnitude as SEPIA input 2 and the generated DI weights as
+input 3, matching `python_wrapper.m`. Procedure choices are `comp_di`, `default`,
+`optimized`, and `automatic`. Each selected algorithm writes `Sepia_Chimap.nii.gz`,
+a parameter JSON, and a reusable deepseb QC PNG under `dipole_inversion`. The
+default chi-map display range is `-0.04` to `0.04` with `bwr`. Force reruns
+invalidate final DI approval; manually inspect every chi map and PNG before
+recording the final pipeline milestone.
+Milestone validation performed when a button is clicked does not reload or
+overwrite values currently typed into the field-map form.
 
 Finally, manually inspect both B0 maps and PNGs and select **Record fieldmap QC
 approval**. This is a separate `fieldmap_qc` milestone and is the readiness gate

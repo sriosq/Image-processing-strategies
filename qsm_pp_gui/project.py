@@ -23,8 +23,11 @@ MILESTONES = (
     ("fieldmap_visualization", "Field-map PNGs"),
     ("fieldmap_qc", "Field-map QC"),
     ("noise_weights", "Noise & weights"),
+    ("noise_weights_qc", "Noise & weights QC"),
     ("bgfr", "BGFR"),
+    ("bgfr_qc", "BGFR QC"),
     ("dipole_inversion", "Dipole inversion"),
+    ("dipole_inversion_qc", "Dipole inversion QC"),
 )
 
 
@@ -114,6 +117,15 @@ def refresh_milestones(project: dict[str, Any]) -> None:
         "registration": all(_nonempty_file(masking.get(key)) for key in ("warp_megre_to_t1w", "warp_t1w_to_megre", "vertebral_levels_megre")),
         "field_map": all(_fieldmap_variant_complete(project, variant) for variant in ("masked", "unmasked")),
         "fieldmap_visualization": _fieldmap_pngs_complete(project),
+        "noise_weights": all(_nonempty_file(project.get("noise_weights", {}).get(key)) for key in ("noise_sd", "weights")),
+        "bgfr": bool(project.get("bgfr", {}).get("results")) and all(
+            all(_nonempty_file(files.get(key)) for key in ("localfield", "qc_png", "parameters"))
+            for files in project.get("bgfr", {}).get("results", {}).values()
+        ),
+        "dipole_inversion": bool(project.get("dipole_inversion", {}).get("results")) and all(
+            all(_nonempty_file(files.get(key)) for key in ("chimap", "qc_png", "parameters"))
+            for files in project.get("dipole_inversion", {}).get("results", {}).values()
+        ),
     }
     for name, complete in output_checks.items():
         was_complete = milestone_complete(project, name)

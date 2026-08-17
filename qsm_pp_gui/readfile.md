@@ -35,7 +35,13 @@
 - Explain both ROMEO fieldmap variants, phase-offset correction, `-k`, `-u`, milliseconds for ROMEO TE, and output folders.
 - Explain ROMEO's fixed `B0.nii` and `corrected_phase.nii` outputs and the participant-prefixed gzip copies.
 - Explain B0-only `sct_deepseb` PNG generation, `cmin`, `cmax`, `cbar`, and mask outlines.
+- Explain that changed DeepSeg display settings automatically regenerate PNGs and can be verified in Developer mode.
 - Explain mandatory final fieldmap QC approval before BGFR and DI.
+- Explain noise SD and weights generation, second-based TEs, output names, force-rerun invalidation, and mandatory manual QC of both maps.
+- Explain BGFR `comp_bgfr`, `default`, and `optimized` choices, per-algorithm parameter JSON/local-field PNG outputs, force reruns, and mandatory BGFR QC.
+- Explain that the reusable deepseb helper accepts fieldmaps, local fields, and chi maps with stage-specific display limits.
+- Add a SEPIA dependency bullet: download the required external toolboxes, retain their directory structures, configure their paths in SEPIA, and let `sepia_addpath` manage MATLAB paths.
+- Explain DI procedure choices, magnitude as input 2, weights as input 3, `-0.04` to `0.04` chi-map QC defaults, force reruns, and final manual QC.
 - Emphasize that SEPIA stores TE in seconds while ROMEO receives TE in milliseconds.
 - Add screenshots after the interface stabilizes.
 - Add troubleshooting for missing commands, missing MATLAB Engine, and failed external tools.

@@ -56,3 +56,12 @@ def test_masked_and_unmasked_romeo_commands_and_milestone(tmp_path: Path) -> Non
     project = json.loads(project_path.read_text(encoding="utf-8"))
     assert project["milestones"]["fieldmap_visualization"]["complete"] is True
     assert project["milestones"]["fieldmap_qc"]["complete"] is False
+
+    command_count = len(commands)
+    updated_pngs = create_fieldmap_pngs(inputs, -0.5, 0.5, "viridis", runner=png_runner)
+    assert len(commands) == command_count + 2
+    updated_command = commands[-1]
+    assert updated_command[updated_command.index("-cmin") + 1] == "-0.5"
+    assert updated_command[updated_command.index("-cmax") + 1] == "0.5"
+    assert updated_command[updated_command.index("-cbar") + 1] == "viridis"
+    assert updated_pngs["masked"].is_file()

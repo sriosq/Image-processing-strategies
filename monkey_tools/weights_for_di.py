@@ -13,9 +13,9 @@ import nibabel as nib
 from scipy.ndimage import uniform_filter
 
 # ---- 1. DEFINE INPUTS -------------------------------------------------------
-noisesd_path = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_024\acdc_testing\n_std_output\mc_shim_n_std.nii.gz"
-mask_path    = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_024\acdc_testing\chi_024_custom_sc_msk.nii.gz"
-out_path     = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_024\acdc_testing\n_std_output\mc_shim_weights.nii.gz"
+noisesd_path = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_26\qsm_processing\mc\w_reg\n_std_output/n_std.nii.gz"
+mask_path    = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_26\qsm_processing\mc\chi_026_mc_sc_msk.nii.gz"
+out_path     = r"R:\soothsayer\sc_qsm\sc_qsm\neuropoly_data\chi_26\qsm_processing\mc\w_reg\n_std_output/di_weights.nii.gz"
 
 # ---- 2. LOAD ----------------------------------------------------------------
 sd_nii  = nib.load(noisesd_path)

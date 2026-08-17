@@ -147,6 +147,14 @@ def create_fieldmap_pngs(
         raise MaskingError(f"Participant project file not found: {project_path}")
     project = json.loads(project_path.read_text(encoding="utf-8"))
     fieldmap = project.get("fieldmap", {})
+    requested_settings = {"cmin": float(cmin), "cmax": float(cmax), "cbar": cbar.strip()}
+    previous_settings = project.get("fieldmap_qc_settings", {})
+    settings_changed = (
+        previous_settings.get("cmin") != requested_settings["cmin"]
+        or previous_settings.get("cmax") != requested_settings["cmax"]
+        or previous_settings.get("cbar") != requested_settings["cbar"]
+    )
+    regenerate = force or settings_changed
     pngs: dict[str, Path] = {}
     for variant in ("masked", "unmasked"):
         variant_data = fieldmap.get(variant, {})
@@ -157,10 +165,10 @@ def create_fieldmap_pngs(
         png_path = b0_path.parent / name
         pngs[variant] = call_deepseb(
             b0_path, png_path, cmin, cmax, cbar,
-            maskpath=inputs.mask_path, runner=runner, force=force,
+            maskpath=inputs.mask_path, runner=runner, force=regenerate,
         )
         variant_data["qc_png"] = str(png_path.resolve())
-    project["fieldmap_qc_settings"] = {"cmin": cmin, "cmax": cmax, "cbar": cbar}
+    project["fieldmap_qc_settings"] = requested_settings
     mark_milestone(project, "fieldmap_visualization")
     mark_milestone(project, "fieldmap_qc", False)
     project_path.write_text(json.dumps(project, indent=2), encoding="utf-8")
