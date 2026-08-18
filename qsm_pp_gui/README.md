@@ -131,6 +131,16 @@ exact command with all paths and arguments. Normal progress messages remain
 visible whether developer mode is enabled or not. This preference is saved in
 the local `config.json`.
 
+## Acquisition units
+
+Echo-time and central-frequency units are selected explicitly; the GUI never
+guesses from numeric magnitude. Echo times may be entered in `ms` or `s`, and
+central frequency in `Hz` or `MHz`. The SEPIA JSON/MAT headers always receive
+seconds and Hz, while ROMEO receives milliseconds. The project JSON records the
+original values and selected units so reopening a project restores exactly what
+was entered. Older project files without unit metadata retain the historical
+defaults of milliseconds and Hz.
+
 ## Masking workflow
 
 The Masks tab creates `<output-root>/<participant-id>/masking/` and runs each
@@ -150,8 +160,22 @@ operation as a separate checkpoint:
    labels before recording registration QC approval.
 
 The final outputs use participant-prefixed names and are recorded under the
-`masking` section of the participant project JSON. Existing non-empty outputs
-are reused so checked work is not silently overwritten.
+`masking` section of the participant project JSON.
+
+For a multi-echo 4D magnitude, **Also create a second GM mask from the
+echo-averaged magnitude** creates a voxelwise arithmetic mean across the echo
+dimension and saves:
+
+- `<participant-id>_echo-avg_magnitude.nii.gz`
+- `<participant-id>_echo-avg_desc-GM_mask.nii.gz`
+
+The original first-echo GM segmentation is always retained. The WM mask remains
+SC minus the first-echo GM mask, so enabling the optional comparison does not
+silently change existing downstream processing. The option requires at least two
+echoes in a 4D NIfTI; leave it off for a 3D acquisition. Both GM masks must be
+manually inspected and corrected when necessary before masking QC is approved.
+
+Existing non-empty outputs are reused so checked work is not silently overwritten.
 
 Enable **Force rerun selected step** to deliberately replace the output of the
 chosen action. Re-running the T1 cord mask or disc labels also removes the old
@@ -161,7 +185,8 @@ models do not accept the original 4D multi-echo magnitude.
 
 More specifically:
 
-- forcing meGRE masks regenerates the first echo and the SC, GM, and WM masks;
+- forcing meGRE masks regenerates the first echo and the SC, GM, and WM masks,
+  plus the echo-average image and GM mask when that option is enabled;
 - forcing the T1 SC mask invalidates the vertebral-level result;
 - forcing disc labels replaces the labels and invalidates vertebral levels;
 - forcing vertebral levels replaces only the vertebral-level result.
@@ -262,7 +287,10 @@ The **5 BGFR** procedure menu provides:
 BGFR uses the selected B0 fieldmap, MATLAB SEPIA header, meGRE SC mask, and noise
 SD map. The SEPIA directory comes from Settings; MATLAB Engine is loaded only
 when the run starts. Each algorithm receives its own folder containing the local
-field, a portable parameter JSON, and a QC PNG. The local-field display range is
+field, a portable parameter JSON, and a QC PNG. SEPIA initially generates its
+fixed output name, after which the GUI performs a cross-platform rename to
+`<participant-id>_desc-localfield.nii.gz`; its JSON and PNG use the same stem.
+The local-field display range is
 taken directly from the BGFR `cmin`, `cmax`, and `cbar` controls. Enable developer
 mode to see each conceptual `python_wrapper(...)` call and every exact
 `sct_deepseb` subprocess command. Force rerun recreates the selected procedure
@@ -292,11 +320,17 @@ See the official [SEPIA installation and dependency instructions](https://sepia-
 After BGFR QC, select a local-field result in **6 Dipole inversion**. The GUI
 passes the original magnitude as SEPIA input 2 and the generated DI weights as
 input 3, matching `python_wrapper.m`. Procedure choices are `comp_di`, `default`,
-`optimized`, and `automatic`. Each selected algorithm writes `Sepia_Chimap.nii.gz`,
-a parameter JSON, and a reusable deepseb QC PNG under `dipole_inversion`. The
+`optimized`, and `automatic`. Each selected algorithm writes
+`<participant-id>_desc-chimap.nii.gz`, a JSON and PNG with the same stem, under
+its algorithm folder in `dipole_inversion`. The
 default chi-map display range is `-0.04` to `0.04` with `bwr`. Force reruns
 invalidate final DI approval; manually inspect every chi map and PNG before
 recording the final pipeline milestone.
+
+When a project is loaded, the DI local-field input prefers the saved `opt_pdf`
+result because this is the spinal-cord QSM default. If it is unavailable, the
+first existing BGFR result is shown instead. The path remains browseable for
+intentional method comparisons; no filename or numeric unit is guessed.
 Milestone validation performed when a button is clicked does not reload or
 overwrite values currently typed into the field-map form.
 

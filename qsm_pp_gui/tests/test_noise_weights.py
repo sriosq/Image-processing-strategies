@@ -3,7 +3,7 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 
-from qsm_pp_gui.bgfr import PIPELINES
+from qsm_pp_gui.bgfr import PIPELINES, _rename_generated as rename_bgfr_output
 from qsm_pp_gui.dipole import PIPELINES as DI_PIPELINES
 from qsm_pp_gui.utils.noise_weights import create_noise_and_weights
 
@@ -36,3 +36,12 @@ def test_di_pipeline_choices_cover_all_parameter_families() -> None:
     assert len(DI_PIPELINES["default"]) == 5
     assert len(DI_PIPELINES["optimized"]) == 5
     assert DI_PIPELINES["automatic"] == ["auto_iLSQR", "auto_closedForm"]
+
+
+def test_sepias_generated_output_is_renamed_portably(tmp_path: Path) -> None:
+    generated = tmp_path / "Sepia_localfield.nii.gz"
+    canonical = tmp_path / "sub-01_desc-localfield.nii.gz"
+    generated.write_bytes(b"nifti")
+    assert rename_bgfr_output(generated, canonical) == canonical
+    assert canonical.read_bytes() == b"nifti"
+    assert not generated.exists()

@@ -4,7 +4,7 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 
-from qsm_pp_gui.masking import MaskingInputs, create_disc_labels, create_megre_masks, extract_first_echo, register_megre_to_t1w, update_project_masking
+from qsm_pp_gui.masking import MaskingInputs, create_disc_labels, create_echo_average, create_megre_masks, extract_first_echo, register_megre_to_t1w, update_project_masking
 
 
 def make_inputs(tmp_path: Path) -> MaskingInputs:
@@ -52,6 +52,36 @@ def test_cached_4d_first_echo_is_replaced_with_3d(tmp_path: Path) -> None:
     nib.save(nib.Nifti1Image(np.zeros((4, 5, 6, 2)), np.eye(4)), inputs.first_echo)
     output = extract_first_echo(inputs)
     assert nib.load(output).shape == (4, 5, 6)
+
+
+def test_echo_average_uses_all_echoes(tmp_path: Path) -> None:
+    inputs = make_inputs(tmp_path)
+    image = nib.load(inputs.magnitude_path)
+    data = np.zeros(image.shape, dtype=np.float32)
+    data[..., 0] = 2
+    data[..., 1] = 6
+    nib.save(nib.Nifti1Image(data, image.affine, image.header), inputs.magnitude_path)
+
+    output = create_echo_average(inputs)
+
+    assert output.name == "sub-001_echo-avg_magnitude.nii.gz"
+    assert nib.load(output).shape == (4, 5, 6)
+    assert np.allclose(nib.load(output).get_fdata(), 4)
+
+
+def test_optional_echo_average_creates_second_gm_mask(tmp_path: Path) -> None:
+    inputs = make_inputs(tmp_path)
+    commands: list[list[str]] = []
+
+    def runner(command: list[str], interactive: bool) -> None:
+        commands.append(command)
+        Path(command[command.index("-o") + 1]).write_bytes(b"NIFTI")
+
+    outputs = create_megre_masks(inputs, runner, include_echo_average_gm=True)
+
+    assert outputs["gm_echo_average_mask"].name == "sub-001_echo-avg_desc-GM_mask.nii.gz"
+    assert commands[-1][:2] == ["sct_deepseg", "graymatter"]
+    assert commands[-1][commands[-1].index("-i") + 1].endswith("sub-001_echo-avg_magnitude.nii.gz")
 
 
 def test_forced_disc_relabel_uses_range_and_invalidates_levels(tmp_path: Path) -> None:

@@ -107,21 +107,25 @@ class QsmApp(tk.Tk):
     def _inputs(self, parent: ttk.Frame, _title: str) -> None:
         parent.columnconfigure(1, weight=1)
         ttk.Label(parent, text="Participant and meGRE acquisition", style="Section.TLabel").grid(row=0, column=0, columnspan=4, sticky="w")
-        ttk.Label(parent, text="Echo times are entered in milliseconds and converted to seconds in the SEPIA header. Central frequency is entered in Hz.", wraplength=850).grid(row=1, column=0, columnspan=4, sticky="w", pady=(4, 14))
+        ttk.Label(parent, text="Select the units explicitly. The SEPIA header always stores echo times in seconds and central frequency in Hz.", wraplength=850).grid(row=1, column=0, columnspan=4, sticky="w", pady=(4, 14))
         rows = [
             ("Participant ID", "participant_id", "", "Example: sub-001", None),
             ("Magnitude NIfTI", "magnitude_path", "", "3D or multi-echo 4D", "file"),
             ("Phase NIfTI", "phase_path", "", "3D or multi-echo 4D", "file"),
-            ("Echo times (ms)", "echo_times", "", "Example: 4.55, 8.81, 13.07", None),
+            ("Echo times", "echo_times", "", "Example: 4.55, 8.81, 13.07", None),
             ("B0 strength (T)", "b0", "3", "Example: 3 or 7", None),
             ("B0 direction", "b0_direction", "0, 0, 1", "Three scanner-axis components", None),
-            ("Central frequency (Hz)", "central_frequency", "", "Example: 123250000", None),
+            ("Central frequency", "central_frequency", "", "Example: 123250000 or 123.25", None),
             ("Matrix size", "matrix_size", "", "Three integers: X, Y, Z", None),
             ("Voxel size (mm)", "voxel_size", "", "Three values: X, Y, Z", None),
             ("Output root", "output_directory", "", "A participant folder is created here", "directory"),
         ]
         for row, values in enumerate(rows, 2):
             self._entry_row(parent, row, *values)
+        self.echo_time_unit = tk.StringVar(value="ms")
+        ttk.Combobox(parent, textvariable=self.echo_time_unit, values=("ms", "s"), state="readonly", width=7).grid(row=5, column=2, padx=(8, 0), pady=6)
+        self.frequency_unit = tk.StringVar(value="Hz")
+        ttk.Combobox(parent, textvariable=self.frequency_unit, values=("Hz", "MHz"), state="readonly", width=7).grid(row=8, column=2, padx=(8, 0), pady=6)
         ttk.Button(parent, text="Validate and create SEPIA headers (.json + .mat)", command=self._save_acquisition).grid(row=12, column=0, columnspan=2, sticky="w", pady=(18, 8))
         self.input_status = ttk.Label(parent, text="No header created yet.", foreground="#555", wraplength=850)
         self.input_status.grid(row=13, column=0, columnspan=4, sticky="w")
@@ -131,7 +135,8 @@ class QsmApp(tk.Tk):
         ttk.Label(parent, text="Mask creation and vertebral levels", style="Section.TLabel").grid(row=0, column=0, columnspan=4, sticky="w")
         explanation = (
             "The meGRE spinal-cord (SC) and gray-matter (GM) masks are created from the first magnitude echo. "
-            "The white-matter (WM) mask is SC minus GM. The T1 is segmented separately; disc labels are placed "
+            "For 4D data, an optional second GM mask can be segmented from the voxelwise average of all echoes. "
+            "The white-matter (WM) mask remains SC minus the first-echo GM mask. The T1 is segmented separately; disc labels are placed "
             "manually in the SCT viewer and then used to calculate vertebral levels. All outputs go into the "
             "participant's masking folder. Every mask and both vertebral-level segmentations must be opened, "
             "inspected manually, and corrected when necessary before approval."
@@ -140,8 +145,15 @@ class QsmApp(tk.Tk):
         self._entry_row(parent, 2, "Magnitude NIfTI", "mask_magnitude_path", "", "Defaults to the acquisition magnitude", "file")
         self._entry_row(parent, 3, "T1-weighted NIfTI", "mask_t1_path", "", "Required for vertebral levels", "file")
 
+        self.echo_average_gm = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            parent,
+            text="Also create a second GM mask from the echo-averaged magnitude (4D multi-echo data only)",
+            variable=self.echo_average_gm,
+        ).grid(row=4, column=0, columnspan=4, sticky="w", pady=(4, 2))
+
         range_frame = ttk.Frame(parent)
-        range_frame.grid(row=4, column=0, columnspan=4, sticky="w", pady=(4, 8))
+        range_frame.grid(row=5, column=0, columnspan=4, sticky="w", pady=(4, 8))
         ttk.Label(range_frame, text="Disc labels from").pack(side="left")
         ttk.Entry(range_frame, textvariable=self._set("disc_first", "1"), width=6).pack(side="left", padx=6)
         ttk.Label(range_frame, text="to").pack(side="left")
@@ -150,7 +162,7 @@ class QsmApp(tk.Tk):
         ttk.Checkbutton(range_frame, text="Force rerun selected step", variable=self.force_mask_rerun).pack(side="left", padx=(24, 0))
 
         actions = ttk.LabelFrame(parent, text="Run and check each step", padding=12)
-        actions.grid(row=5, column=0, columnspan=4, sticky="ew", pady=(8, 8))
+        actions.grid(row=6, column=0, columnspan=4, sticky="ew", pady=(8, 8))
         action_specs = [
             ("1. Create meGRE SC, GM, and WM masks", self._start_megre_masks),
             ("2. Create T1 spinal-cord mask", self._start_t1_mask),
@@ -163,7 +175,7 @@ class QsmApp(tk.Tk):
             button.grid(row=row, column=0, sticky="w", pady=4)
             self.mask_buttons.append(button)
         self.mask_qc_confirmed = tk.BooleanVar(value=False)
-        ttk.Checkbutton(actions, text="I manually inspected/corrected the SC, GM, WM, T1 SC, and T1-space vertebral labels", variable=self.mask_qc_confirmed).grid(row=4, column=0, sticky="w", pady=(12, 3))
+        ttk.Checkbutton(actions, text="I manually inspected/corrected the SC, GM (including echo-averaged GM when created), WM, T1 SC, and T1-space vertebral labels", variable=self.mask_qc_confirmed).grid(row=4, column=0, sticky="w", pady=(12, 3))
         qc_button = ttk.Button(actions, text="5. Record mask meGRE and T1w QC approval", command=self._approve_mask_qc)
         qc_button.grid(row=5, column=0, sticky="w", pady=4)
         self.mask_buttons.append(qc_button)
@@ -177,7 +189,7 @@ class QsmApp(tk.Tk):
         self.mask_buttons.append(registration_qc_button)
         ttk.Label(actions, text="Existing non-empty outputs are reused unless Force rerun is selected. Any rerun invalidates the relevant QC approval and downstream registration.", foreground="#555", wraplength=760).grid(row=9, column=0, sticky="w", pady=(10, 0))
         self.mask_status = ttk.Label(parent, text="Complete the Inputs & header tab before running masking.", foreground="#555", wraplength=900)
-        self.mask_status.grid(row=6, column=0, columnspan=4, sticky="w", pady=(8, 0))
+        self.mask_status.grid(row=7, column=0, columnspan=4, sticky="w", pady=(8, 0))
 
     def _fieldmap(self, parent: ttk.Frame, _title: str) -> None:
         parent.columnconfigure(1, weight=1)
@@ -330,17 +342,27 @@ class QsmApp(tk.Tk):
             self.values[name].set(selected)
 
     def _acquisition(self) -> Acquisition:
+        entered_tes = parse_numbers(self.values["echo_times"].get())
+        entered_frequency = float(self.values["central_frequency"].get())
+        echo_unit = self.echo_time_unit.get()
+        frequency_unit = self.frequency_unit.get()
+        echo_times_ms = [value * 1000.0 for value in entered_tes] if echo_unit == "s" else entered_tes
+        central_frequency_hz = entered_frequency * 1_000_000.0 if frequency_unit == "MHz" else entered_frequency
         return Acquisition(
             participant_id=self.values["participant_id"].get().strip(),
             magnitude_path=self.values["magnitude_path"].get().strip(),
             phase_path=self.values["phase_path"].get().strip(),
             output_directory=self.values["output_directory"].get().strip(),
-            echo_times_ms=parse_numbers(self.values["echo_times"].get()),
+            echo_times_ms=echo_times_ms,
             b0_tesla=float(self.values["b0"].get()),
             b0_direction=parse_numbers(self.values["b0_direction"].get(), 3),
-            central_frequency_hz=float(self.values["central_frequency"].get()),
+            central_frequency_hz=central_frequency_hz,
             matrix_size=parse_numbers(self.values["matrix_size"].get(), 3, integer=True),
             voxel_size_mm=parse_numbers(self.values["voxel_size"].get(), 3),
+            echo_time_input_unit=echo_unit,
+            central_frequency_input_unit=frequency_unit,
+            echo_times_entered=entered_tes,
+            central_frequency_entered=entered_frequency,
         )
 
     def _save_acquisition(self) -> None:
@@ -430,7 +452,9 @@ class QsmApp(tk.Tk):
 
     def _start_megre_masks(self) -> None:
         force = self.force_mask_rerun.get()
-        self._run_mask_task("meGRE SC, GM, and WM masks", "megre_masks", lambda inputs: create_megre_masks(inputs, runner=self._gui_runner, force=force))
+        include_echo_average = self.echo_average_gm.get()
+        description = "meGRE SC, first-echo GM, WM" + (", and echo-averaged GM masks" if include_echo_average else " masks")
+        self._run_mask_task(description, "megre_masks", lambda inputs: create_megre_masks(inputs, runner=self._gui_runner, force=force, include_echo_average_gm=include_echo_average))
 
     def _start_t1_mask(self) -> None:
         force = self.force_mask_rerun.get()
@@ -645,7 +669,7 @@ class QsmApp(tk.Tk):
             if self.developer_enabled: self.after(0, lambda: self._append_command_log("MATLAB> " + line))
         def worker() -> None:
             try:
-                results = run_bgfr(*paths, sepia, output, procedure, cmin, cmax, cbar, self._gui_runner, force, logger)
+                results = run_bgfr(*paths, sepia, output, self.values["participant_id"].get().strip(), procedure, cmin, cmax, cbar, self._gui_runner, force, logger)
                 project = json.loads(self.current_project_path.read_text(encoding="utf-8"))
                 from .project import mark_milestone
                 project["bgfr"] = {"procedure": procedure, "qc_settings": {"cmin": cmin, "cmax": cmax, "cbar": cbar}, "results": {name: {key: str(path.resolve()) for key, path in files.items()} for name, files in results.items()}}
@@ -687,7 +711,7 @@ class QsmApp(tk.Tk):
             if self.developer_enabled: self.after(0, lambda: self._append_command_log("MATLAB> " + line))
         def worker() -> None:
             try:
-                results = run_dipole_inversion(*paths, sepia, output, procedure, cmin, cmax, cbar, self._gui_runner, force, logger)
+                results = run_dipole_inversion(*paths, sepia, output, self.values["participant_id"].get().strip(), procedure, cmin, cmax, cbar, self._gui_runner, force, logger)
                 project = json.loads(self.current_project_path.read_text(encoding="utf-8"))
                 from .project import mark_milestone
                 project["dipole_inversion"] = {"procedure": procedure, "localfield": str(paths[0].resolve()), "qc_settings": {"cmin": cmin, "cmax": cmax, "cbar": cbar}, "results": {name: {key: str(path.resolve()) for key, path in files.items()} for name, files in results.items()}}
@@ -805,15 +829,27 @@ class QsmApp(tk.Tk):
         self.current_project = project
         participant_directory = Path(project["output_directory"])
         bgfr_results = project.get("bgfr", {}).get("results", {})
-        first_bgfr_localfield = next((files.get("localfield", "") for files in bgfr_results.values() if files.get("localfield")), "")
+        preferred_bgfr_localfield = bgfr_results.get("opt_pdf", {}).get("localfield", "")
+        first_bgfr_localfield = preferred_bgfr_localfield or next((files.get("localfield", "") for files in bgfr_results.values() if files.get("localfield")), "")
+        acquisition_input = project.get("acquisition_input", {})
+        echo_unit = acquisition_input.get("echo_time_unit", "ms")
+        frequency_unit = acquisition_input.get("central_frequency_unit", "Hz")
+        entered_tes = acquisition_input.get("echo_times")
+        if entered_tes is None:
+            entered_tes = [float(value) * 1000 for value in header["TE"]]
+        entered_frequency = acquisition_input.get("central_frequency")
+        if entered_frequency is None:
+            entered_frequency = float(header["CF"])
+        self.echo_time_unit.set(echo_unit)
+        self.frequency_unit.set(frequency_unit)
         assignments = {
             "participant_id": project["participant_id"],
             "magnitude_path": project["magnitude_path"],
             "phase_path": project["phase_path"],
-            "echo_times": self._numbers_text(float(value) * 1000 for value in header["TE"]),
+            "echo_times": self._numbers_text(entered_tes),
             "b0": f"{float(header['B0']):g}",
             "b0_direction": self._numbers_text(header["B0_dir"]),
-            "central_frequency": f"{float(header['CF']):g}",
+            "central_frequency": f"{float(entered_frequency):g}",
             "matrix_size": self._numbers_text(header["matrix_size"]),
             "voxel_size": self._numbers_text(header["voxel_size"]),
             "output_directory": str(participant_directory.parent),
@@ -841,6 +877,7 @@ class QsmApp(tk.Tk):
         self.mask_qc_confirmed.set(milestone_complete(project, "mask_qc"))
         self.registration_qc_confirmed.set(milestone_complete(project, "registration_qc"))
         self.fieldmap_qc_confirmed.set(milestone_complete(project, "fieldmap_qc"))
+        self.echo_average_gm.set(bool(project.get("masking", {}).get("gm_echo_average_mask")))
         self.nw_qc_confirmed.set(milestone_complete(project, "noise_weights_qc"))
         self.bgfr_qc_confirmed.set(milestone_complete(project, "bgfr_qc"))
         self.di_qc_confirmed.set(milestone_complete(project, "dipole_inversion_qc"))

@@ -110,7 +110,8 @@ def refresh_milestones(project: dict[str, Any]) -> None:
 
     masking = project.get("masking", {})
     output_checks = {
-        "megre_masks": all(_nonempty_file(masking.get(key)) for key in ("sc_mask", "gm_mask", "wm_mask")),
+        "megre_masks": all(_nonempty_file(masking.get(key)) for key in ("sc_mask", "gm_mask", "wm_mask"))
+        and ("gm_echo_average_mask" not in masking or _nonempty_file(masking.get("gm_echo_average_mask"))),
         "t1_sc_mask": _nonempty_file(masking.get("t1_sc_mask")),
         "disc_labels": _nonempty_file(masking.get("disc_labels")),
         "vertebral_levels": _nonempty_file(masking.get("vertebral_levels")),

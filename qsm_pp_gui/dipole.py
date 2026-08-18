@@ -44,7 +44,15 @@ def _matlab_value(value, matlab):
     return value
 
 
-def run_dipole_inversion(localfield: Path, magnitude: Path, weights: Path, header: Path, mask: Path, sepia_directory: Path, output_directory: Path, procedure: str, cmin: float, cmax: float, cbar: str, runner, force: bool = False, logger: Callable[[str], None] | None = None) -> dict[str, dict[str, Path]]:
+def _rename_generated(source: Path, destination: Path) -> Path:
+    if source.is_file() and source.resolve() != destination.resolve():
+        if destination.exists():
+            destination.unlink()
+        source.replace(destination)
+    return destination
+
+
+def run_dipole_inversion(localfield: Path, magnitude: Path, weights: Path, header: Path, mask: Path, sepia_directory: Path, output_directory: Path, participant_id: str, procedure: str, cmin: float, cmax: float, cbar: str, runner, force: bool = False, logger: Callable[[str], None] | None = None) -> dict[str, dict[str, Path]]:
     if procedure not in PIPELINES:
         raise DipoleError(f"Unknown DI procedure: {procedure}")
     for label, path in (("local field", localfield), ("magnitude", magnitude), ("weights", weights), ("SEPIA header", header), ("mask", mask), ("SEPIA directory", sepia_directory)):
@@ -63,18 +71,26 @@ def run_dipole_inversion(localfield: Path, magnitude: Path, weights: Path, heade
         for name in PIPELINES[procedure]:
             folder = output_directory / procedure / name
             prefix = folder / "Sepia"
-            chimap = folder / "Sepia_Chimap.nii.gz"
-            png = folder / f"{name}.png"
-            params_path = folder / f"{name}_params.json"
+            generated_chimap = folder / "Sepia_Chimap.nii.gz"
+            chimap = folder / f"{participant_id}_desc-chimap.nii.gz"
+            png = folder / f"{participant_id}_desc-chimap.png"
+            params_path = folder / f"{participant_id}_desc-chimap.json"
             folder.mkdir(parents=True, exist_ok=True)
             prefix.mkdir(parents=True, exist_ok=True)
             params = {"general": dict(GENERAL), "qsm": dict(METHODS[name])}
+            if not force:
+                _rename_generated(generated_chimap, chimap)
+            if force:
+                for path in (chimap, png, params_path, generated_chimap):
+                    if path.is_file():
+                        path.unlink()
             if force or not chimap.is_file() or chimap.stat().st_size == 0:
                 converted = {"general": dict(GENERAL), "qsm": {key: _matlab_value(value, matlab) for key, value in METHODS[name].items()}}
                 call = f"python_wrapper({localfield}, {magnitude}, {weights}, {header}, {METHODS[name]['method']}, {prefix}, {mask}, params)"
                 if logger:
                     logger(call)
                 engine.python_wrapper(str(localfield), str(magnitude), str(weights), str(header), METHODS[name]["method"], str(prefix), str(mask), converted, nargout=0)
+                _rename_generated(generated_chimap, chimap)
             if not chimap.is_file() or chimap.stat().st_size == 0:
                 raise DipoleError(f"SEPIA did not create the expected chi map: {chimap}")
             params_path.write_text(json.dumps(params, indent=2), encoding="utf-8")

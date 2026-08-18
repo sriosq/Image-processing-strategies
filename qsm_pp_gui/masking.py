@@ -10,6 +10,7 @@ import subprocess
 from typing import Callable
 
 import nibabel as nib
+import numpy as np
 
 from .project import mark_milestone
 
@@ -82,12 +83,20 @@ class MaskingInputs:
         return self.masking_directory / f"{self.participant_id}_echo-1_magnitude.nii.gz"
 
     @property
+    def echo_average(self) -> Path:
+        return self.masking_directory / f"{self.participant_id}_echo-avg_magnitude.nii.gz"
+
+    @property
     def sc_mask(self) -> Path:
         return self.masking_directory / f"{self.participant_id}_desc-SC_mask.nii.gz"
 
     @property
     def gm_mask(self) -> Path:
         return self.masking_directory / f"{self.participant_id}_desc-GM_mask.nii.gz"
+
+    @property
+    def gm_echo_average_mask(self) -> Path:
+        return self.masking_directory / f"{self.participant_id}_echo-avg_desc-GM_mask.nii.gz"
 
     @property
     def wm_mask(self) -> Path:
@@ -172,7 +181,35 @@ def extract_first_echo(inputs: MaskingInputs, force: bool = False) -> Path:
     return inputs.first_echo
 
 
-def create_megre_masks(inputs: MaskingInputs, runner: Runner = run_command, force: bool = False) -> dict[str, Path]:
+def create_echo_average(inputs: MaskingInputs, force: bool = False) -> Path:
+    """Average all echoes of a 4D magnitude into a spatially matched 3D image."""
+    inputs.validate_megre()
+    inputs.masking_directory.mkdir(parents=True, exist_ok=True)
+    try:
+        image = nib.load(str(inputs.magnitude_path))
+    except (OSError, nib.filebasedimages.ImageFileError) as exc:
+        raise MaskingError(f"Magnitude is not a readable NIfTI: {inputs.magnitude_path}") from exc
+    if len(image.shape) != 4 or image.shape[3] < 2:
+        raise MaskingError(
+            f"Echo-averaged GM segmentation requires a multi-echo 4D magnitude; received shape {image.shape}. "
+            "Leave the echo-averaged option off for a 3D acquisition."
+        )
+    if inputs.echo_average.is_file() and inputs.echo_average.stat().st_size > 0 and not force:
+        if _require_3d_nifti(inputs.echo_average, "Cached echo-averaged magnitude") == image.shape[:3]:
+            return inputs.echo_average
+        inputs.echo_average.unlink()
+    _remove_for_rerun(inputs.echo_average, force)
+    data = np.mean(np.asarray(image.dataobj, dtype=np.float64), axis=3)
+    header = image.header.copy()
+    header.set_data_shape(data.shape)
+    header.set_data_dtype(np.float32)
+    nib.save(nib.Nifti1Image(data.astype(np.float32), image.affine, header), str(inputs.echo_average))
+    _require_output(inputs.echo_average, "Echo-averaged magnitude")
+    _require_3d_nifti(inputs.echo_average, "Echo-averaged magnitude")
+    return inputs.echo_average
+
+
+def create_megre_masks(inputs: MaskingInputs, runner: Runner = run_command, force: bool = False, include_echo_average_gm: bool = False) -> dict[str, Path]:
     first_echo = extract_first_echo(inputs, force=force)
     steps = [
         (["sct_deepseg", "spinalcord", "-i", str(first_echo), "-o", str(inputs.sc_mask)], inputs.sc_mask, "Spinal-cord mask"),
@@ -184,7 +221,15 @@ def create_megre_masks(inputs: MaskingInputs, runner: Runner = run_command, forc
         if not output.is_file() or output.stat().st_size == 0:
             runner(command, False)
         _require_output(output, label)
-    return {"first_echo": first_echo, "sc_mask": inputs.sc_mask, "gm_mask": inputs.gm_mask, "wm_mask": inputs.wm_mask}
+    outputs = {"first_echo": first_echo, "sc_mask": inputs.sc_mask, "gm_mask": inputs.gm_mask, "wm_mask": inputs.wm_mask}
+    if include_echo_average_gm:
+        echo_average = create_echo_average(inputs, force=force)
+        _remove_for_rerun(inputs.gm_echo_average_mask, force)
+        if not inputs.gm_echo_average_mask.is_file() or inputs.gm_echo_average_mask.stat().st_size == 0:
+            runner(["sct_deepseg", "graymatter", "-i", str(echo_average), "-o", str(inputs.gm_echo_average_mask)], False)
+        _require_output(inputs.gm_echo_average_mask, "Echo-averaged gray-matter mask")
+        outputs.update({"echo_average": echo_average, "gm_echo_average_mask": inputs.gm_echo_average_mask})
+    return outputs
 
 
 def create_t1_sc_mask(inputs: MaskingInputs, runner: Runner = run_command, force: bool = False) -> Path:
@@ -304,6 +349,9 @@ def update_project_masking(inputs: MaskingInputs, outputs: dict[str, Path], mile
         raise MaskingError(f"Participant project file not found: {project_path}")
     project = json.loads(project_path.read_text(encoding="utf-8"))
     masking = project.setdefault("masking", {})
+    if milestone == "megre_masks" and "gm_echo_average_mask" not in outputs:
+        masking.pop("echo_average", None)
+        masking.pop("gm_echo_average_mask", None)
     masking.update({name: str(path.resolve()) for name, path in outputs.items()})
     if inputs.t1_path:
         masking["t1_path"] = str(inputs.t1_path.resolve())

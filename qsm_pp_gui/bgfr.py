@@ -41,7 +41,16 @@ def _matlab_value(value, matlab):
     return value
 
 
-def run_bgfr(fieldmap: Path, header: Path, mask: Path, noise_sd: Path, sepia_directory: Path, output_directory: Path, procedure: str, cmin: float, cmax: float, cbar: str, runner, force: bool = False, logger: Callable[[str], None] | None = None) -> dict[str, dict[str, Path]]:
+def _rename_generated(source: Path, destination: Path) -> Path:
+    """Rename an output portably, replacing only the exact destination file."""
+    if source.is_file() and source.resolve() != destination.resolve():
+        if destination.exists():
+            destination.unlink()
+        source.replace(destination)
+    return destination
+
+
+def run_bgfr(fieldmap: Path, header: Path, mask: Path, noise_sd: Path, sepia_directory: Path, output_directory: Path, participant_id: str, procedure: str, cmin: float, cmax: float, cbar: str, runner, force: bool = False, logger: Callable[[str], None] | None = None) -> dict[str, dict[str, Path]]:
     if procedure not in PIPELINES:
         raise BgfrError(f"Unknown BGFR procedure: {procedure}")
     for label, path in (("fieldmap", fieldmap), ("SEPIA header", header), ("mask", mask), ("noise SD", noise_sd), ("SEPIA directory", sepia_directory)):
@@ -59,19 +68,27 @@ def run_bgfr(fieldmap: Path, header: Path, mask: Path, noise_sd: Path, sepia_dir
         for name in PIPELINES[procedure]:
             folder = output_directory / procedure / name
             prefix = folder / "Sepia"
-            localfield = folder / "Sepia_localfield.nii.gz"
-            png = folder / f"{name}.png"
-            params_path = folder / f"{name}_params.json"
+            generated_localfield = folder / "Sepia_localfield.nii.gz"
+            localfield = folder / f"{participant_id}_desc-localfield.nii.gz"
+            png = folder / f"{participant_id}_desc-localfield.png"
+            params_path = folder / f"{participant_id}_desc-localfield.json"
             folder.mkdir(parents=True, exist_ok=True)
             # Match the output-prefix layout used by the checked automation.
             prefix.mkdir(parents=True, exist_ok=True)
             params = {"general": dict(GENERAL), "bfr": dict(METHODS[name])}
+            if not force:
+                _rename_generated(generated_localfield, localfield)
+            if force:
+                for path in (localfield, png, params_path, generated_localfield):
+                    if path.is_file():
+                        path.unlink()
             if force or not localfield.is_file() or localfield.stat().st_size == 0:
                 converted = {"general": dict(GENERAL), "bfr": {key: _matlab_value(value, matlab) for key, value in METHODS[name].items()}}
                 call = f"python_wrapper({fieldmap}, '', {noise_sd}, {header}, {METHODS[name]['method']}, {prefix}, {mask}, params)"
                 if logger:
                     logger(call)
                 engine.python_wrapper(str(fieldmap), "", str(noise_sd), str(header), METHODS[name]["method"], str(prefix), str(mask), converted, nargout=0)
+                _rename_generated(generated_localfield, localfield)
             if not localfield.is_file() or localfield.stat().st_size == 0:
                 raise BgfrError(f"SEPIA did not create the expected local field: {localfield}")
             params_path.write_text(json.dumps(params, indent=2), encoding="utf-8")

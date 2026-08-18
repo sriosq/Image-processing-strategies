@@ -36,6 +36,10 @@ class Acquisition:
     central_frequency_hz: float
     matrix_size: list[int]
     voxel_size_mm: list[float]
+    echo_time_input_unit: str = "ms"
+    central_frequency_input_unit: str = "Hz"
+    echo_times_entered: list[float] | None = None
+    central_frequency_entered: float | None = None
 
     def validate(self) -> None:
         if not _ID_PATTERN.fullmatch(self.participant_id):
@@ -81,6 +85,12 @@ class Acquisition:
             "phase_path": str(Path(self.phase_path).resolve()),
             "output_directory": str(participant_dir.resolve()),
             "sepia_header": str(header_path.resolve()),
+            "acquisition_input": {
+                "echo_times": self.echo_times_entered if self.echo_times_entered is not None else self.echo_times_ms,
+                "echo_time_unit": self.echo_time_input_unit,
+                "central_frequency": self.central_frequency_entered if self.central_frequency_entered is not None else self.central_frequency_hz,
+                "central_frequency_unit": self.central_frequency_input_unit,
+            },
         }
         project_path.write_text(json.dumps(project, indent=2), encoding="utf-8")
         return header_path, project_path

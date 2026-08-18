@@ -21,6 +21,7 @@
 - Explain that echo times are entered in milliseconds and stored in seconds for SEPIA.
 - Explain the generated participant directory, JSON project file, JSON header, and MAT header.
 - Explain that masking outputs are stored in the participant `masking` directory.
+- Explain the optional 4D echo-averaged magnitude and second GM mask, their filenames, that first-echo GM remains available, and that WM continues to use first-echo GM.
 - Explain that meGRE SC and GM masks use the first magnitude echo.
 - Explain that WM is calculated as SC minus GM.
 - Explain the T1 spinal-cord segmentation step.
@@ -42,6 +43,8 @@
 - Explain that the reusable deepseb helper accepts fieldmaps, local fields, and chi maps with stage-specific display limits.
 - Add a SEPIA dependency bullet: download the required external toolboxes, retain their directory structures, configure their paths in SEPIA, and let `sepia_addpath` manage MATLAB paths.
 - Explain DI procedure choices, magnitude as input 2, weights as input 3, `-0.04` to `0.04` chi-map QC defaults, force reruns, and final manual QC.
+- Explain explicit `ms`/`s` and `Hz`/`MHz` selectors, canonical SEPIA/ROMEO units, saved original units, and backward-compatible defaults.
+- Explain participant-based local-field/chi-map NIfTI, JSON, and PNG names, cross-platform renaming of SEPIA outputs, and the default preference for `opt_pdf` in DI.
 - Emphasize that SEPIA stores TE in seconds while ROMEO receives TE in milliseconds.
 - Add screenshots after the interface stabilizes.
 - Add troubleshooting for missing commands, missing MATLAB Engine, and failed external tools.

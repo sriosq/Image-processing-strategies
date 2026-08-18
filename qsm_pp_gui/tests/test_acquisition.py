@@ -20,3 +20,22 @@ def test_save_header_uses_participant_prefix_and_sepia_units(tmp_path: Path) -> 
     header = json.loads(header_path.read_text(encoding="utf-8"))
     assert header["TE"] == [0.004, 0.008]
     assert header["B0_dir"] == [0.0, 0.0, 1.0]
+
+
+def test_save_records_original_input_units(tmp_path: Path) -> None:
+    magnitude, phase = tmp_path / "mag.nii.gz", tmp_path / "phase.nii.gz"
+    magnitude.touch()
+    phase.touch()
+    acquisition = Acquisition(
+        "sub-002", str(magnitude), str(phase), str(tmp_path / "out"),
+        [5.0, 10.0], 3.0, [0.0, 0.0, 1.0], 123_250_000.0,
+        [4, 4, 4], [1.0, 1.0, 1.0],
+        echo_time_input_unit="s", central_frequency_input_unit="MHz",
+        echo_times_entered=[0.005, 0.01], central_frequency_entered=123.25,
+    )
+    _, project_path = acquisition.save()
+    project = json.loads(project_path.read_text(encoding="utf-8"))
+    assert project["acquisition_input"]["echo_time_unit"] == "s"
+    assert project["acquisition_input"]["echo_times"] == [0.005, 0.01]
+    assert project["acquisition_input"]["central_frequency_unit"] == "MHz"
+    assert project["acquisition_input"]["central_frequency"] == 123.25
