@@ -9,10 +9,11 @@ Arguments:
 1. Path to the DICOM directory
 2. Subject name or tag
 3. Base sequence name
-4. Optional series number
+4. Shimming mode (2D, 3D or 3D_reg)
+5. Series number
 
 Example:
-rt_shim subset chi_test 3D_meGRE_no_custom_shim 5
+ball_rt_shim DCM_DIR chi_xxx 3D_meGRE_no_custom_shim 3D 5
 "
 
 SCRIPT_DIR=$(dirname "$(realpath "$0")")

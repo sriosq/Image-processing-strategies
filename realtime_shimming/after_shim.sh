@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+echo "
+This script runs the entire experiment for a given subject.
+
+This script uses fixed TEs so if you adjust that in your sequence make sure to update the script
+This script uses fixed bipolar correction for the B0 map estimation
+
+Arguments:
+1. Path to the DICOM directory
+2. Subject name or tag
+3. Base sequence name
+5. Series number
+
+Example:
+after_shim DCM_DIR chi_xxxp 3D_meGRE_MCShim 5
+"
+
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+
+if [[ $# -ne 4 ]]; then
+    echo "Usage: after_shim <DCM_DIR> <SUB_NAME> <SEQ_NAME> <SERIES_NUMBER>"
+    exit 1
+fi
+
+DCM_DIR=$1
+DUB_NAME=$2
+SEQ_NAME=$3
+SELECTED_SERIES=$4
+
+
+# Check series being an integer first
+if [[ -n "${SELECTED_SERIES}" && ! "${SELECTED_SERIES}" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: Series number must be an integer."
+    exit 1
+fi
+
+
+# Output directories
+NIFTI_DIR="${DCM_DIR}/after_shim_nifti"
+CONCAT_DIR="${NIFTI_DIR}/concat"
+MASK_DIR="${NIFTI_DIR}/masking"
+FMAP_DIR="${NIFTI_DIR}/fmap"
+
+
+
+mkdir -p "${NIFTI_DIR}" "${CONCAT_DIR}" "${MASK_DIR}" "${FMAP_DIR}" #-p to pass if already there
+
+echo "Converting DICOMs to NIfTIs"
+
+dcm2niix \
+    -z y \
+    -f "${DUB_NAME}_%z_%p_%s_e%e" \
+    -o "${NIFTI_DIR}" \
+    "${DCM_DIR}"
+
+echo "Finding matching series"
+
+ALL_SERIES=$(
+    find "${NIFTI_DIR}" -maxdepth 1 -type f \
+        -name "${DUB_NAME}_${SEQ_NAME}_*_e1.nii.gz" \
+        ! -name "*_ph.nii.gz" |
+    sed -E "s|.*/${DUB_NAME}_${SEQ_NAME}_([0-9]+)_e1\.nii\.gz|\1|" |
+    sort -n |
+    uniq
+)
+
+if [[ -z "${ALL_SERIES}" ]]; then
+    echo "ERROR: No matching series found for ${SEQ_NAME}."
+    exit 1
+fi
+
+echo "Available series:"
+printf '%s\n' "${ALL_SERIES}"
+
+if [[ -n "${SELECTED_SERIES}" ]]; then
+    if ! printf '%s\n' "${ALL_SERIES}" | grep -qx "${SELECTED_SERIES}"; then
+        echo "ERROR: Series ${SELECTED_SERIES} was not found."
+        exit 1
+    fi
+
+    SER="${SELECTED_SERIES}"
+
+elif [[ $(printf '%s\n' "${ALL_SERIES}" | wc -l | tr -d ' ') -eq 1 ]]; then
+    SER="${ALL_SERIES}"
+
+else
+    echo "ERROR: Multiple matching series were found."
+    echo
+    echo "Run the command again with the desired series number:"
+    echo "rt_shim \"${DCM_DIR}\" \"${DUB_NAME}\" \"${SEQ_NAME}\" <series_number>"
+    exit 1
+fi
+
+MAG_SER="${SER}"
+PH_SER=$((MAG_SER + 1))
+
+MAG_FN="${CONCAT_DIR}/${DUB_NAME}_${SEQ_NAME}_${MAG_SER}_mag.nii.gz"
+PH_FN="${CONCAT_DIR}/${DUB_NAME}_${SEQ_NAME}_${PH_SER}_ph.nii.gz"
+
+MAG_ECHOES=$(
+    find "${NIFTI_DIR}" -maxdepth 1 -type f \
+        -name "${DUB_NAME}_${SEQ_NAME}_${MAG_SER}_e*.nii.gz" \
+        ! -name "*_ph.nii.gz" |
+    sort
+)
+
+PH_ECHOES=$(
+    find "${NIFTI_DIR}" -maxdepth 1 -type f \
+        -name "${DUB_NAME}_${SEQ_NAME}_${PH_SER}_e*_ph.nii.gz" |
+    sort
+)
+
+if [[ -z "${MAG_ECHOES}" ]]; then
+    echo "ERROR: No magnitude echoes found for series ${MAG_SER}."
+    exit 1
+fi
+
+if [[ -z "${PH_ECHOES}" ]]; then
+    echo "ERROR: No phase echoes found for series ${PH_SER}."
+    exit 1
+fi
+
+echo "Selected acquisition:"
+echo "  Magnitude series: ${MAG_SER}"
+echo "  Phase series:     ${PH_SER}"
+
+echo "Magnitude echoes:"
+printf '%s\n' "${MAG_ECHOES}"
+
+echo "Phase echoes:"
+printf '%s\n' "${PH_ECHOES}"
+
+st_image concat ${MAG_ECHOES} -o "${MAG_FN}" --axis 3
+st_image concat ${PH_ECHOES} -o "${PH_FN}" --axis 3
+
+# Because of the automation above, we can automatically run segmentation using e1 mag
+# 
+mage1="${NIFTI_DIR}/${DUB_NAME}_${SEQ_NAME}_${MAG_SER}_e1.nii.gz"
+
+sc_msk_fn="${MASK_DIR}/${DUB_NAME}_${SEQ_NAME}_${MAG_SER}_sc_msk.nii.gz"
+shim_msk_fn="${MASK_DIR}/${DUB_NAME}_${SEQ_NAME}_${MAG_SER}_dilated_sc_msk.nii.gz"
+
+# CHeck if e1 exists:
+if [[ ! -f "${mage1}" ]]; then
+    echo "ERROR: Selected magnitude echo 1 does not exist:"
+    echo "  ${mage1}"
+    exit 1
+fi
+
+# -p for phase, -m for magnitude, -B to calculate a B0 map, -t for echo times, -o for outpath
+# TEs: [6.93, 11.85, 16.85, 21.85, 26.85] # Remember ROMEO expects the echo times in milliseconds
+# For PF (6/8), the TEs [3.46, 9.20, 14.94, 20.68, 26.42]
+# Remember to add the: --phase-offset-correction bipolar ONLY if there is bipolar readout!
+# More TEs: "[3.46, 9.20, 14.94, 20.68, 26.42, 30, 35]"
+TEs="[6.93, 11.85, 16.85, 21.85, 26.85]"
+
+julia /Users/mclogar/ROMEO.jl/romeo.jl \
+	-p "${PH_FN}" \
+	-m "${MAG_FN}" \
+	-B \
+	-t "${TEs}" \
+	--phase-offset-correction bipolar \
+	-o "${FMAP_DIR}" 
+
+mage1_json="${NIFTI_DIR}/${DUB_NAME}_${SEQ_NAME}_${MAG_SER}_e1.json"
+cp "${mage1_json}" "${FMAP_DIR}/B0.json"
+
+# A B0 will be created we can now:
+gzip "${FMAP_DIR}/B0.nii"
+FMAP="${FMAP_DIR}/B0.nii.gz"
+MSK_FMAP="${FMAP_DIR}/masked_B0.nii.gz"
+
+echo "
+Running spinal cord toolbox with command: 
+
+sct_deepseg spinalcord -i "${mage1}" -o "${sc_msk_fn}"
+"
+
+sct_deepseg spinalcord \
+    -i "${mage1}" \
+    -o "${sc_msk_fn}"
+
+sct_maths \
+    -i "${sc_msk_fn}" \
+    -shape disk \
+    -dilate 10 \
+    -dim 2 \
+    -o "${shim_msk_fn}"
+
+# Mask the B0 map with the SC mask for pattern detection
+sct_maths \
+    -i "${FMAP}" \
+    -mul "${sc_msk_fn}" \
+    -o "${MSK_FMAP}"
+
+# Visualize
+fsleyes \
+    "${mage1}" -cm greyscale \
+	"${MSK_FMAP}" -cm greyscale \
+    "${shim_msk_fn}" -cm red -a 70.0 &
+
+
+
+
+
