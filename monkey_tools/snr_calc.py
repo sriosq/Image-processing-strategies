@@ -54,7 +54,7 @@ def snr_calc(img_path, signal_msk_path, noise_msk_path, verbose=0, correct_ricia
             if verbose: print("Rician corrected noise: ", sigma) 
         else:
             sigma = np.std(img_data[..., 0][noise_msk_data == 1])
-            if verbose: print("Noise std: ",noise_std)
+            if verbose: print("Noise std: ",sigma)
 
         for echo_idx in range(img_data.shape[3]):
             signal_mean = np.mean(img_data[..., echo_idx][signal_msk_data==1]) # or "mu"

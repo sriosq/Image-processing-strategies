@@ -513,3 +513,28 @@ def algo_paired_ttest(
         )
 
     return pd.DataFrame(results)
+
+
+def cnr_wm_gm(map_img_path, wm_msk, gm_msk):
+
+    map_img = nib.load(map_img_path)
+    map_data = map_img.get_fdata()
+
+    gm_msk_data = nib.load(gm_msk).get_fdata()
+    wm_msk_data = nib.load(wm_msk).get_fdata()
+
+    map_gm_vals = map_data[gm_msk_data == 1]
+    map_wm_vals = map_data[wm_msk_data == 1]
+
+    map_gm_mean = np.mean(map_gm_vals)
+    map_wm_mean = np.mean(map_wm_vals)
+
+    map_gm_std = np.std(map_gm_vals)
+    map_wm_std = np.std(map_wm_vals)
+
+    cnr = (
+        np.abs(map_gm_mean - map_wm_mean)
+        / np.sqrt((map_gm_std**2 + map_wm_std**2)/2)
+    )
+
+    return cnr, map_wm_mean, map_gm_mean, map_wm_std, map_gm_std
