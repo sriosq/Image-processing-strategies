@@ -4,15 +4,18 @@ set -euo pipefail
 
 echo "
 This script runs the entire experiment for a given subject.
+This script uses fixed TEs so if you adjust that in your sequence make sure to update the script
+This script uses fixed bipolar correction for the B0 map estimation
 
 Arguments:
 1. Path to the DICOM directory
 2. Subject name or tag
 3. Base sequence name
-4. Optional series number
+4. Shimming mode (2D, 3D or 3D_reg)
+5. Series number
 
 Example:
-rt_shim subset chi_test 3D_meGRE_no_custom_shim 5
+rt_shim DCM_DIR chi_xxx 3D_meGRE_no_custom_shim 3D 5
 "
 
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
@@ -26,8 +29,10 @@ fi
 DCM_DIR=$1
 DUB_NAME=$2
 SEQ_NAME=$3
-ACQ_TYPE=$4 # Expect 2D or 3D
-SELECTED_SERIES=${5:-}
+ACQ_TYPE=$4 
+SELECTED_SERIES=$5 # You can check the series number in the scanners computer
+# If you want to add an optional param it can be:
+# OPTIONAL_PARAM=${X:-}  # Just change X to the position it would have
 
 
 # Check series being an integer first
@@ -174,6 +179,7 @@ cp "${mage1_json}" "${FMAP_DIR}/B0.json"
 # A B0 will be created we can now:
 gzip "${FMAP_DIR}/B0.nii"
 FMAP="${FMAP_DIR}/B0.nii.gz"
+MSK_FMAP="${FMAP_DIR}/masked_B0.nii.gz"
 
 echo "
 Running spinal cord toolbox with command: 
@@ -192,10 +198,16 @@ sct_maths \
     -dim 2 \
     -o "${shim_msk_fn}"
 
-# VISUALIZE
+# Mask the B0 map with the SC mask for pattern detection
+sct_maths \
+    -i "${FMAP}" \
+    -mul "${sc_msk_fn}" \
+    -o "${MSK_FMAP}"
+
+# Visualize
 fsleyes \
     "${mage1}" -cm greyscale \
-	"${FMAP}" -cm greyscale \
+	"${MSK_FMAP}" -cm greyscale \
     "${shim_msk_fn}" -cm red -a 70.0 &
 
 # To create the shim coefficients we need to create a json file and add some stuff
